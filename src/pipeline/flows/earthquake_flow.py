@@ -3,6 +3,7 @@
 from prefect import flow, get_run_logger
 
 from pipeline.config import DATABASE_URL, EARTHQUAKE_API_URL, MIN_MAGNITUDE
+from pipeline.db import check_connection
 from pipeline.tasks.extract import extract_earthquake_data
 from pipeline.tasks.load import load_earthquake_data
 from pipeline.tasks.transform import transform_earthquake_data
@@ -16,6 +17,10 @@ def earthquake_etl_flow(
 ) -> int:
     """Extract earthquake data from USGS, transform, and load into PostgreSQL."""
     logger = get_run_logger()
+
+    logger.info("Checking database connection to %s", connection_url)
+    check_connection(connection_url)
+    logger.info("Database connection verified")
 
     logger.info("Extracting earthquake data from %s", api_url)
     raw_data = extract_earthquake_data(api_url)
