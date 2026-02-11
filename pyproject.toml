@@ -1,0 +1,37 @@
+[project]
+name = "claude-agent-workflow"
+version = "0.1.0"
+description = "Teaching project: autonomous data pipeline with Claude agent"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "prefect>=3.0,<4.0",
+    "prefect-sqlalchemy>=0.5",
+    "psycopg2-binary>=2.9",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pipeline"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
