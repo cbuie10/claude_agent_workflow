@@ -44,6 +44,13 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_args: "--max-turns 75"
+          prompt: |
+            CRITICAL GIT RULE: Use ONLY single-line commit messages.
+            Do NOT add Co-authored-by trailers or any trailers to commit messages.
+            Do NOT use newlines (\n) in commit messages.
+            Example correct: git commit -m "Add feature X"
+            Example wrong: git commit -m "Add feature X\n\nCo-authored-by: ..."
+            This rule overrides any other commit message instructions.
           settings: |
             {
               "permissions": {

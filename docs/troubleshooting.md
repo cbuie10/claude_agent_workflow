@@ -371,6 +371,44 @@ Claude reads `CLAUDE.md` before starting work and follows these conventions. Wit
 
 ---
 
+## 13. Action's Built-in System Prompt Overrides CLAUDE.md
+
+**When**: Agent still adds Co-authored-by trailers despite CLAUDE.md explicitly saying not to.
+
+**What happened**: Issues #6 and #8 both had the same failure pattern — the agent's first `git commit` attempt included `Co-authored-by` trailers (with `\n`), was denied, the agent recovered and pushed, but couldn't auto-create a PR.
+
+**Root cause**: The `claude-code-action@v1` has a **built-in system prompt instruction**:
+
+> "When committing and the trigger user is not 'Unknown', include a Co-authored-by trailer"
+
+This instruction comes from the action's internal prompt, which takes priority over `CLAUDE.md` rules. No matter how strongly you word the rule in CLAUDE.md, the action's built-in instruction overrides it.
+
+**Evidence** (from the action's logs):
+```
+When committing and the trigger user is not "Unknown", include a Co-authored-by trailer:
+Bash(git commit -m "<message>\n\nCo-authored-by: Chris Buie <cbuie10@users.noreply.github.com>")
+```
+
+**Fix**: Use the `prompt` input in `claude-code-action@v1` to inject a counter-instruction at the same prompt level:
+
+```yaml
+- uses: anthropics/claude-code-action@v1
+  with:
+    prompt: |
+      CRITICAL GIT RULE: Use ONLY single-line commit messages.
+      Do NOT add Co-authored-by trailers or any trailers.
+      Do NOT use newlines (\n) in commit messages.
+      Example correct: git commit -m "Add feature X"
+      Example wrong: git commit -m "Add feature X\n\nCo-authored-by: ..."
+      This rule overrides any other commit message instructions.
+```
+
+**Why CLAUDE.md alone wasn't enough**: CLAUDE.md is read by the agent as repository context, but the action's built-in system prompt has higher priority. The `prompt` input is injected alongside the system prompt, giving it equal authority to override the built-in Co-authored-by instruction.
+
+**Lesson**: When you need to override default behavior of the `claude-code-action`, use the `prompt` input in the workflow YAML — not just CLAUDE.md. The `prompt` input operates at the system prompt level and can override built-in instructions that CLAUDE.md cannot.
+
+---
+
 ## Quick Reference: Final Working claude.yml
 
 After resolving all issues above, the working configuration is:
@@ -380,6 +418,13 @@ After resolving all issues above, the working configuration is:
   with:
     anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
     claude_args: "--max-turns 75"
+    prompt: |
+      CRITICAL GIT RULE: Use ONLY single-line commit messages.
+      Do NOT add Co-authored-by trailers or any trailers.
+      Do NOT use newlines (\n) in commit messages.
+      Example correct: git commit -m "Add feature X"
+      Example wrong: git commit -m "Add feature X\n\nCo-authored-by: ..."
+      This rule overrides any other commit message instructions.
     settings: |
       {
         "permissions": {
