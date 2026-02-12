@@ -1,6 +1,10 @@
 """Tests for the transform task."""
 
-from pipeline.tasks.transform import transform_earthquake_data, transform_weather_data
+from pipeline.tasks.transform import (
+    transform_earthquake_data,
+    transform_occ_wells_data,
+    transform_weather_data,
+)
 
 # Sample GeoJSON that mimics real USGS data
 SAMPLE_GEOJSON = {
@@ -171,4 +175,94 @@ def test_transform_weather_handles_empty_hourly():
         "hourly": {"time": []},
     }
     result = transform_weather_data.fn(data)
+    assert result == []
+
+
+# Sample CSV data that mimics real OCC wells data
+SAMPLE_OCC_CSV = (
+    "API,WELL_RECORDS_DOCS,WELL_NAME,WELL_NUM,OPERATOR,WELLSTATUS,WELLTYPE,"
+    "SYMBOL_CLASS,SH_LAT,SH_LON,COUNTY,SECTION,TOWNSHIP,RANGE,"
+    "QTR4,QTR3,QTR2,QTR1,PM,FOOTAGE_EW,EW,FOOTAGE_NS,NS\n"
+    "3500100002,http://example.com,PENN MUTUAL LIFE,#1,OTC/OCC NOT ASSIGNED,"
+    "PA,DRY,PLUGGED,35.894723,-94.78241,ADAIR,5.00,16N,24E,"
+    "NE,NW,SE,NW,IM,330.0,E,990.0,S\n"
+    "3500100003,,TEST WELL,#2,ACME OIL,A,OIL,ACTIVE,,,ADAIR,6.00,16N,24E,,,,,,,,"
+    "\n"
+    ",,,#3,MISSING API,A,GAS,ACTIVE,36.123,-94.456,ALFALFA,,,,,,,,,,,"
+)
+
+
+def test_transform_occ_wells_returns_list():
+    """Should return a list of row dicts."""
+    result = transform_occ_wells_data.fn(SAMPLE_OCC_CSV)
+    assert isinstance(result, list)
+    assert len(result) == 2  # Third row has no API
+
+
+def test_transform_occ_wells_maps_columns():
+    """Should correctly map CSV columns to snake_case database columns."""
+    result = transform_occ_wells_data.fn(SAMPLE_OCC_CSV)
+    row = result[0]
+    assert row["api"] == "3500100002"
+    assert row["well_records_docs"] == "http://example.com"
+    assert row["well_name"] == "PENN MUTUAL LIFE"
+    assert row["well_num"] == "#1"
+    assert row["operator"] == "OTC/OCC NOT ASSIGNED"
+    assert row["well_status"] == "PA"
+    assert row["well_type"] == "DRY"
+    assert row["symbol_class"] == "PLUGGED"
+    assert row["county"] == "ADAIR"
+    assert row["section"] == "5.00"
+    assert row["township"] == "16N"
+    assert row["range"] == "24E"
+
+
+def test_transform_occ_wells_converts_floats():
+    """Should convert latitude, longitude, and footage to floats."""
+    result = transform_occ_wells_data.fn(SAMPLE_OCC_CSV)
+    row = result[0]
+    assert isinstance(row["sh_lat"], float)
+    assert row["sh_lat"] == 35.894723
+    assert isinstance(row["sh_lon"], float)
+    assert row["sh_lon"] == -94.78241
+    assert isinstance(row["footage_ew"], float)
+    assert row["footage_ew"] == 330.0
+    assert isinstance(row["footage_ns"], float)
+    assert row["footage_ns"] == 990.0
+
+
+def test_transform_occ_wells_handles_empty_floats():
+    """Should convert empty float fields to None."""
+    result = transform_occ_wells_data.fn(SAMPLE_OCC_CSV)
+    row = result[1]  # Second row has empty lat/lon
+    assert row["sh_lat"] is None
+    assert row["sh_lon"] is None
+
+
+def test_transform_occ_wells_handles_empty_text():
+    """Should convert empty text fields to None."""
+    result = transform_occ_wells_data.fn(SAMPLE_OCC_CSV)
+    row = result[1]  # Second row has empty well_records_docs
+    assert row["well_records_docs"] is None
+
+
+def test_transform_occ_wells_skips_empty_api():
+    """Should skip rows where API is empty."""
+    result = transform_occ_wells_data.fn(SAMPLE_OCC_CSV)
+    assert len(result) == 2
+    for row in result:
+        assert row["api"]  # All returned rows should have an API
+
+
+def test_transform_occ_wells_strips_whitespace():
+    """Should strip whitespace from all text fields."""
+    csv_with_spaces = """API,WELL_NAME
+3500100002,  TEST WELL  """
+    result = transform_occ_wells_data.fn(csv_with_spaces)
+    assert result[0]["well_name"] == "TEST WELL"
+
+
+def test_transform_occ_wells_handles_empty_csv():
+    """Should return an empty list when CSV has only headers."""
+    result = transform_occ_wells_data.fn("API,WELL_NAME\n")
     assert result == []

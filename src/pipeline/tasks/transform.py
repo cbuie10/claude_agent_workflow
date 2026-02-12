@@ -1,5 +1,7 @@
 """Transform tasks — reshape and clean raw data."""
 
+import csv
+import io
 from datetime import datetime, timezone
 
 from prefect import task
@@ -88,6 +90,68 @@ def transform_weather_data(raw_data: dict) -> list[dict]:
             "temperature_f": temperature,
             "relative_humidity": humidity,
             "wind_speed_mph": wind_speed,
+        }
+        rows.append(row)
+
+    return rows
+
+
+@task(name="transform_occ_wells_data")
+def transform_occ_wells_data(csv_text: str) -> list[dict]:
+    """Parse CSV text into a list of row dictionaries.
+
+    Each row maps directly to a column in the oklahoma_wells table.
+    Skips rows where API is empty or None.
+    """
+    rows = []
+    reader = csv.DictReader(io.StringIO(csv_text))
+
+    for csv_row in reader:
+        # Skip rows where API is empty or None
+        api = csv_row.get("API", "").strip()
+        if not api:
+            continue
+
+        # Helper to convert to float or None
+        def to_float(value: str) -> float | None:
+            if not value or not value.strip():
+                return None
+            try:
+                return float(value.strip())
+            except ValueError:
+                return None
+
+        # Helper to strip text or return None
+        def to_text(value: str) -> str | None:
+            if not value:
+                return None
+            stripped = value.strip()
+            return stripped if stripped else None
+
+        row = {
+            "api": api,
+            "well_records_docs": to_text(csv_row.get("WELL_RECORDS_DOCS")),
+            "well_name": to_text(csv_row.get("WELL_NAME")),
+            "well_num": to_text(csv_row.get("WELL_NUM")),
+            "operator": to_text(csv_row.get("OPERATOR")),
+            "well_status": to_text(csv_row.get("WELLSTATUS")),
+            "well_type": to_text(csv_row.get("WELLTYPE")),
+            "symbol_class": to_text(csv_row.get("SYMBOL_CLASS")),
+            "sh_lat": to_float(csv_row.get("SH_LAT")),
+            "sh_lon": to_float(csv_row.get("SH_LON")),
+            "county": to_text(csv_row.get("COUNTY")),
+            "section": to_text(csv_row.get("SECTION")),
+            "township": to_text(csv_row.get("TOWNSHIP")),
+            "range": to_text(csv_row.get("RANGE")),
+            "qtr4": to_text(csv_row.get("QTR4")),
+            "qtr3": to_text(csv_row.get("QTR3")),
+            "qtr2": to_text(csv_row.get("QTR2")),
+            "qtr1": to_text(csv_row.get("QTR1")),
+            "pm": to_text(csv_row.get("PM")),
+            "footage_ew": to_float(csv_row.get("FOOTAGE_EW")),
+            "ew": to_text(csv_row.get("EW")),
+            "footage_ns": to_float(csv_row.get("FOOTAGE_NS")),
+            "ns": to_text(csv_row.get("NS")),
         }
         rows.append(row)
 
