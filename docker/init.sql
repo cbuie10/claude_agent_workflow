@@ -14,3 +14,14 @@ CREATE TABLE IF NOT EXISTS earthquakes (
     tsunami         INTEGER,
     inserted_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS weather_forecasts (
+    id                  TEXT PRIMARY KEY,
+    latitude            DOUBLE PRECISION,
+    longitude           DOUBLE PRECISION,
+    forecast_time       TIMESTAMP WITH TIME ZONE,
+    temperature_f       REAL,
+    relative_humidity   REAL,
+    wind_speed_mph      REAL,
+    fetched_at          TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);

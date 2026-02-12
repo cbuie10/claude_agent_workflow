@@ -17,3 +17,8 @@ EARTHQUAKE_API_URL = os.getenv(
 )
 
 MIN_MAGNITUDE = float(os.getenv("MIN_MAGNITUDE", "0.0"))
+
+WEATHER_API_URL = os.getenv(
+    "WEATHER_API_URL",
+    "https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.006&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&temperature_unit=fahrenheit&forecast_days=1",
+)

@@ -43,3 +43,52 @@ def transform_earthquake_data(raw_data: dict, min_magnitude: float = 0.0) -> lis
         rows.append(row)
 
     return rows
+
+
+@task(name="transform_weather_data")
+def transform_weather_data(raw_data: dict) -> list[dict]:
+    """Flatten hourly weather arrays into a list of row dictionaries.
+
+    Each row maps directly to a column in the weather_forecasts table.
+    Filters out any rows where temperature is null.
+    """
+    rows = []
+
+    latitude = raw_data.get("latitude")
+    longitude = raw_data.get("longitude")
+    hourly = raw_data.get("hourly", {})
+
+    times = hourly.get("time", [])
+    temperatures = hourly.get("temperature_2m", [])
+    humidities = hourly.get("relative_humidity_2m", [])
+    wind_speeds = hourly.get("wind_speed_10m", [])
+
+    for i, time_str in enumerate(times):
+        temperature = temperatures[i] if i < len(temperatures) else None
+        humidity = humidities[i] if i < len(humidities) else None
+        wind_speed = wind_speeds[i] if i < len(wind_speeds) else None
+
+        # Filter out rows where temperature is null
+        if temperature is None:
+            continue
+
+        # Parse ISO8601 time string to datetime (assume UTC)
+        forecast_time = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+
+        # Generate composite ID from rounded coordinates and timestamp
+        rounded_lat = round(latitude, 2)
+        rounded_lon = round(longitude, 2)
+        composite_id = f"{rounded_lat}_{rounded_lon}_{time_str}"
+
+        row = {
+            "id": composite_id,
+            "latitude": latitude,
+            "longitude": longitude,
+            "forecast_time": forecast_time,
+            "temperature_f": temperature,
+            "relative_humidity": humidity,
+            "wind_speed_mph": wind_speed,
+        }
+        rows.append(row)
+
+    return rows

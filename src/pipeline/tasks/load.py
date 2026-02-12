@@ -38,3 +38,36 @@ def load_earthquake_data(rows: list[dict], connection_url: str) -> int:
         conn.commit()
 
     return len(rows)
+
+
+@task(name="load_weather_data")
+def load_weather_data(rows: list[dict], connection_url: str) -> int:
+    """Upsert weather forecast rows into PostgreSQL.
+
+    Uses ON CONFLICT to make the load idempotent — safe to re-run
+    without creating duplicate rows.
+    """
+    if not rows:
+        return 0
+
+    upsert_sql = text("""
+        INSERT INTO weather_forecasts (
+            id, latitude, longitude, forecast_time, temperature_f,
+            relative_humidity, wind_speed_mph
+        ) VALUES (
+            :id, :latitude, :longitude, :forecast_time, :temperature_f,
+            :relative_humidity, :wind_speed_mph
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            temperature_f = EXCLUDED.temperature_f,
+            relative_humidity = EXCLUDED.relative_humidity,
+            wind_speed_mph = EXCLUDED.wind_speed_mph
+    """)
+
+    engine = create_engine(connection_url)
+    with engine.connect() as conn:
+        for row in rows:
+            conn.execute(upsert_sql, row)
+        conn.commit()
+
+    return len(rows)
