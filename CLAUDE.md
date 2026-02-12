@@ -55,6 +55,7 @@ canonical pattern to follow when building new pipelines.
 ## Git Conventions
 - Use **single-line** commit messages: `git commit -m "Short description of changes"`
 - Do NOT use multiline commit messages (no `\n`, no HEREDOCs, no `$(cat <<EOF ...)`). Multiline messages break the permission system and the commit will be denied.
+- Do NOT add Co-authored-by trailers or any other trailers to commit messages. They require newlines which break the permission system.
 - Keep commit messages under 100 characters
 
 ## Do NOT

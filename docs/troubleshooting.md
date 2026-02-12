@@ -338,6 +338,39 @@ Claude reads `CLAUDE.md` before starting work and follows these conventions. Wit
 
 ---
 
+## 12. Co-authored-by Trailers Bypass Single-Line Commit Rule
+
+**When**: Agent is instructed to use single-line commit messages (via CLAUDE.md), but still gets a `git commit` permission denial.
+
+**Error** (in `permission_denials` array):
+```json
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git commit -m \"Add feature\n\nCo-authored-by: User <user@example.com>\nCo-authored-by: Claude Sonnet 4.5 <noreply@anthropic.com>\""
+  }
+}
+```
+
+**Root cause**: Claude models are trained to add `Co-authored-by` trailers to commit messages. These trailers require newlines (`\n\n` before the first trailer, `\n` between trailers). Even when CLAUDE.md says "use single-line commit messages", the agent's training to add co-author attribution overrides the instruction. The agent may even label the command as `"description": "Commit changes with single-line message"` while still including newlines.
+
+**What happened on issue #6**: The agent completed all work (48 turns, 38 tests passing) and the first commit attempt was denied due to Co-authored-by trailers. The agent recovered by retrying without trailers and successfully pushed the branch, but couldn't create the PR automatically — it provided a manual "Create PR ➔" link instead.
+
+**Fix**: Explicitly call out Co-authored-by trailers in CLAUDE.md:
+
+```markdown
+## Git Conventions
+- Use single-line commit messages: `git commit -m "Short description"`
+- Do NOT use multiline messages (no \n, no HEREDOCs)
+- Do NOT add Co-authored-by trailers or any other trailers
+```
+
+**Why the generic rule wasn't enough**: Claude's training to attribute co-authors is strong enough to override a general "no multiline" instruction. You need to specifically name `Co-authored-by` to suppress it.
+
+**Lesson**: When instructing AI agents, be specific about the exact patterns you want to prevent. General rules ("no multiline") may not override deeply trained behaviors ("always attribute co-authors"). Name the specific patterns explicitly.
+
+---
+
 ## Quick Reference: Final Working claude.yml
 
 After resolving all issues above, the working configuration is:
