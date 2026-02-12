@@ -50,6 +50,7 @@ jobs:
                 "allow": [
                   "Bash(uv run *)",
                   "Bash(uv sync *)",
+                  "Bash(git *)",
                   "Bash(cat *)",
                   "Read",
                   "Edit",
