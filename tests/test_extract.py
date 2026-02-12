@@ -2,7 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
-from pipeline.tasks.extract import extract_earthquake_data, extract_weather_data
+from pipeline.tasks.extract import (
+    extract_earthquake_data,
+    extract_occ_wells_data,
+    extract_weather_data,
+)
 
 
 def test_extract_returns_dict():
@@ -78,3 +82,47 @@ def test_extract_weather_calls_correct_url():
         extract_weather_data.fn("https://api.open-meteo.com/v1/forecast")
 
     mock_get.assert_called_once_with("https://api.open-meteo.com/v1/forecast", timeout=30.0)
+
+
+def test_extract_occ_wells_returns_csv_text():
+    """extract_occ_wells_data should return raw CSV text."""
+    # Create a fake HTTP response
+    mock_response = MagicMock()
+    mock_response.text = "API,WELL_NAME,OPERATOR\n3500100002,PENN MUTUAL LIFE,OTC/OCC NOT ASSIGNED"
+    mock_response.raise_for_status = MagicMock()
+
+    # Replace httpx.get with our fake — so no real HTTP call is made
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response):
+        result = extract_occ_wells_data.fn("https://fake-url.com/wells.csv")
+
+    assert isinstance(result, str)
+    assert "API,WELL_NAME,OPERATOR" in result
+    assert "3500100002" in result
+
+
+def test_extract_occ_wells_calls_correct_url():
+    """Verify the task passes the URL through to httpx.get with extended timeout."""
+    mock_response = MagicMock()
+    mock_response.text = "API\n3500100002"
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response) as mock_get:
+        extract_occ_wells_data.fn("https://oklahoma.gov/wells.csv")
+
+    mock_get.assert_called_once_with("https://oklahoma.gov/wells.csv", timeout=120.0)
+
+
+def test_extract_occ_wells_handles_large_csv():
+    """extract_occ_wells_data should handle large CSV files."""
+    # Create a fake HTTP response with multiple rows
+    mock_response = MagicMock()
+    csv_lines = ["API,WELL_NAME,OPERATOR"]
+    csv_lines.extend([f"{3500100000 + i},WELL {i},OPERATOR {i}" for i in range(1000)])
+    mock_response.text = "\n".join(csv_lines)
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response):
+        result = extract_occ_wells_data.fn("https://fake-url.com/wells.csv")
+
+    assert isinstance(result, str)
+    assert result.count("\n") == 1000  # Header + 1000 rows

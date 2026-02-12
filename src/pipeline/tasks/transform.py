@@ -1,5 +1,7 @@
 """Transform tasks — reshape and clean raw data."""
 
+import csv
+import io
 from datetime import datetime, timezone
 
 from prefect import task
@@ -88,6 +90,73 @@ def transform_weather_data(raw_data: dict) -> list[dict]:
             "temperature_f": temperature,
             "relative_humidity": humidity,
             "wind_speed_mph": wind_speed,
+        }
+        rows.append(row)
+
+    return rows
+
+
+@task(name="transform_occ_wells_data")
+def transform_occ_wells_data(raw_csv: str) -> list[dict]:
+    """Parse Oklahoma Corporation Commission wells CSV into row dictionaries.
+
+    Reads CSV text using csv.DictReader, maps column names to snake_case,
+    converts numeric fields to appropriate types, and filters out rows with
+    empty API values.
+
+    Each row maps directly to a column in the oklahoma_wells table.
+    """
+    rows = []
+    csv_reader = csv.DictReader(io.StringIO(raw_csv))
+
+    for csv_row in csv_reader:
+        # Helper function to safely get and strip CSV values
+        def get_str(key: str) -> str:
+            value = csv_row.get(key, "")
+            return value.strip() if value else ""
+
+        api = get_str("API")
+
+        # Skip rows where API is empty or None
+        if not api:
+            continue
+
+        # Convert latitude/longitude to float, handle empty strings as None
+        sh_lat_str = get_str("SH_LAT")
+        sh_lon_str = get_str("SH_LON")
+        sh_lat = float(sh_lat_str) if sh_lat_str else None
+        sh_lon = float(sh_lon_str) if sh_lon_str else None
+
+        # Convert footage fields to float, handle empty strings as None
+        footage_ew_str = get_str("FOOTAGE_EW")
+        footage_ns_str = get_str("FOOTAGE_NS")
+        footage_ew = float(footage_ew_str) if footage_ew_str else None
+        footage_ns = float(footage_ns_str) if footage_ns_str else None
+
+        row = {
+            "api": api,
+            "well_records_docs": get_str("WELL_RECORDS_DOCS"),
+            "well_name": get_str("WELL_NAME"),
+            "well_num": get_str("WELL_NUM"),
+            "operator": get_str("OPERATOR"),
+            "well_status": get_str("WELLSTATUS"),
+            "well_type": get_str("WELLTYPE"),
+            "symbol_class": get_str("SYMBOL_CLASS"),
+            "sh_lat": sh_lat,
+            "sh_lon": sh_lon,
+            "county": get_str("COUNTY"),
+            "section": get_str("SECTION"),
+            "township": get_str("TOWNSHIP"),
+            "range": get_str("RANGE"),
+            "qtr4": get_str("QTR4"),
+            "qtr3": get_str("QTR3"),
+            "qtr2": get_str("QTR2"),
+            "qtr1": get_str("QTR1"),
+            "pm": get_str("PM"),
+            "footage_ew": footage_ew,
+            "ew": get_str("EW"),
+            "footage_ns": footage_ns,
+            "ns": get_str("NS"),
         }
         rows.append(row)
 
