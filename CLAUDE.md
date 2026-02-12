@@ -52,6 +52,11 @@ canonical pattern to follow when building new pipelines.
 - New environment variables go in `src/pipeline/config.py` with sensible defaults
 - Update `.env.example` with any new variables
 
+## Git Conventions
+- Use **single-line** commit messages: `git commit -m "Short description of changes"`
+- Do NOT use multiline commit messages (no `\n`, no HEREDOCs, no `$(cat <<EOF ...)`). Multiline messages break the permission system and the commit will be denied.
+- Keep commit messages under 100 characters
+
 ## Do NOT
 - Do not modify `docker/docker-compose.yml` unless the issue explicitly asks for it
 - Do not add new dependencies to `pyproject.toml` — mention needed deps in the PR description

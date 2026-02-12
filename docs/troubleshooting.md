@@ -16,6 +16,7 @@ A reference guide documenting every issue encountered during the initial setup o
 8. [GitHub Label Not Found](#8-github-label-not-found)
 9. [Docker init.sql Not Re-running After Schema Changes](#9-docker-initsql-not-re-running-after-schema-changes)
 10. [Retry Comments Inflate Turn Count](#10-retry-comments-inflate-turn-count)
+11. [Multiline Commit Messages Always Denied](#11-multiline-commit-messages-always-denied)
 
 ---
 
@@ -297,6 +298,43 @@ claude_args: "--max-turns 75"
 **Lesson**: Budget extra turns for issues with long comment threads. A clean issue needs ~40 turns for a complex pipeline. Each retry attempt adds ~5-10 turns of overhead from context processing. For a third retry, you might need 60-75 turns.
 
 **Cost impact**: Each turn costs API credits. The failed 51-turn run cost $2.06 with no output. Factor in retry costs when debugging permission issues — fix permissions first, then re-trigger.
+
+---
+
+## 11. Multiline Commit Messages Always Denied
+
+**When**: Agent writes all code, passes tests, but `git commit` is denied — even with `Bash(git *)` in the permissions allow list.
+
+**Error** (in `permission_denials` array):
+```json
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git commit -m \"Add feature\n\nDetailed description of changes...\""
+  }
+}
+```
+
+**Root cause**: The permission glob matching system in Claude Code **cannot match commands containing embedded newline characters** (`\n`). The `*` wildcard in patterns like `Bash(git *)` or `Bash(git commit *)` stops matching at `\n` boundaries. This means any `git commit -m` with a multiline message — whether using literal `\n`, HEREDOCs, or `$(cat <<EOF)` — will always be denied.
+
+**What we tried that didn't work**:
+- `Bash(git commit *)` (action's built-in) — fails on `\n`
+- `Bash(git *)` (broader pattern) — also fails on `\n`
+- Both together — still fails
+
+**Fix**: Add a rule to `CLAUDE.md` telling the agent to use single-line commit messages:
+
+```markdown
+## Git Conventions
+- Use single-line commit messages: `git commit -m "Short description"`
+- Do NOT use multiline messages (no \n, no HEREDOCs)
+```
+
+Claude reads `CLAUDE.md` before starting work and follows these conventions. With a single-line message, `Bash(git commit *)` matches correctly.
+
+**This was the most persistent bug** — it caused 4 consecutive failed runs on issue #5 ($7+ in API costs) before we identified that the glob system fundamentally cannot handle newlines, regardless of what patterns you add.
+
+**Lesson**: Always instruct the agent to use single-line commit messages in `CLAUDE.md`. This is a platform limitation, not a configuration error. No amount of permission tuning can fix it — the instruction to the agent is the only reliable solution.
 
 ---
 
