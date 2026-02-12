@@ -6,6 +6,7 @@ from pipeline.tasks.extract import (
     extract_earthquake_data,
     extract_occ_wells_data,
     extract_weather_data,
+    extract_well_transfers,
 )
 
 
@@ -110,3 +111,74 @@ def test_extract_occ_wells_calls_correct_url():
         extract_occ_wells_data.fn("https://oklahoma.gov/occ/wells.csv")
 
     mock_get.assert_called_once_with("https://oklahoma.gov/occ/wells.csv", timeout=120.0)
+
+
+def test_extract_well_transfers_returns_list_of_tuples():
+    """extract_well_transfers should return list of row tuples from Excel."""
+    from io import BytesIO
+    from unittest.mock import MagicMock
+
+    from openpyxl import Workbook
+
+    # Create a fake Excel workbook in memory
+    wb = Workbook()
+    ws = wb.active
+    # Header row
+    ws.append(
+        [
+            "EventDate",
+            "API Number",
+            "WellName",
+            "WellNum",
+            "Type",
+            "Status",
+            "PUN 16ez",
+            "PUN 02A",
+        ]
+    )
+    # Data row
+    ws.append(["2026-01-12", "3503702931", "SMITH", "1", "2DNC", "AC", None, None])
+
+    # Save workbook to bytes
+    excel_bytes = BytesIO()
+    wb.save(excel_bytes)
+    excel_bytes.seek(0)
+
+    # Create a fake HTTP response
+    mock_response = MagicMock()
+    mock_response.content = excel_bytes.read()
+    mock_response.raise_for_status = MagicMock()
+
+    # Replace httpx.get with our fake
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response):
+        result = extract_well_transfers.fn("https://fake-url.com/transfers.xlsx")
+
+    assert isinstance(result, list)
+    assert len(result) == 1  # Header skipped, only 1 data row
+    assert result[0][0] == "2026-01-12"
+    assert result[0][1] == "3503702931"
+
+
+def test_extract_well_transfers_calls_correct_url():
+    """Verify the task passes the URL through to httpx.get with timeout."""
+    from io import BytesIO
+
+    from openpyxl import Workbook
+
+    # Create minimal Excel workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["EventDate", "API Number"])
+
+    excel_bytes = BytesIO()
+    wb.save(excel_bytes)
+    excel_bytes.seek(0)
+
+    mock_response = MagicMock()
+    mock_response.content = excel_bytes.read()
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response) as mock_get:
+        extract_well_transfers.fn("https://oklahoma.gov/transfers.xlsx")
+
+    mock_get.assert_called_once_with("https://oklahoma.gov/transfers.xlsx", timeout=60.0)

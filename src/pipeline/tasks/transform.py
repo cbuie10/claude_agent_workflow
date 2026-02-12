@@ -2,7 +2,7 @@
 
 import csv
 import io
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from prefect import task
 
@@ -152,6 +152,131 @@ def transform_occ_wells_data(csv_text: str) -> list[dict]:
             "ew": to_text(csv_row.get("EW")),
             "footage_ns": to_float(csv_row.get("FOOTAGE_NS")),
             "ns": to_text(csv_row.get("NS")),
+        }
+        rows.append(row)
+
+    return rows
+
+
+@task(name="transform_well_transfers")
+def transform_well_transfers(raw_rows: list[tuple]) -> list[dict]:
+    """Transform Excel row tuples into database row dictionaries.
+
+    Maps 32 Excel columns to snake_case database columns with proper type conversions.
+    Skips rows where API Number is empty or None.
+    """
+    rows = []
+
+    # Helper to convert to float or None
+    def to_float(value) -> float | None:
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            try:
+                return float(value)
+            except ValueError:
+                return None
+        return None
+
+    # Helper to convert to int or None
+    def to_int(value) -> int | None:
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            try:
+                return int(float(value))
+            except ValueError:
+                return None
+        return None
+
+    # Helper to convert to text or None
+    def to_text(value) -> str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped if stripped else None
+        return str(value).strip() if str(value).strip() else None
+
+    # Helper to convert to date or None
+    def to_date(value) -> date | None:
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            try:
+                # Try parsing ISO format
+                return datetime.fromisoformat(value).date()
+            except ValueError:
+                return None
+        return None
+
+    for raw_row in raw_rows:
+        # Excel columns (32 total):
+        # 0: EventDate, 1: API Number, 2: WellName, 3: WellNum, 4: Type, 5: Status,
+        # 6: PUN 16ez, 7: PUN 02A, 8: Location Type, 9: Surf_Long_X, 10: Surf_Lat_Y,
+        # 11: County, 12: Section, 13: Township, 14: Range, 15: PM, 16: Q1, 17: Q2,
+        # 18: Q3, 19: Q4, 20: FootageNS, 21: NS, 22: FootageEW, 23: EW,
+        # 24: FromOperatorNumber, 25: FromOperatorName, 26: FromOperatorAddressBlock,
+        # 27: FromOperatorPhone, 28: ToOperatorName, 29: ToOperatorNumber,
+        # 30: ToOperatorAddressBlock, 31: ToOperatorPhone
+
+        # Skip rows where API Number is empty or None
+        api_number = to_text(raw_row[1]) if len(raw_row) > 1 else None
+        if not api_number:
+            continue
+
+        row = {
+            "event_date": to_date(raw_row[0]) if len(raw_row) > 0 else None,
+            "api_number": api_number,
+            "well_name": to_text(raw_row[2]) if len(raw_row) > 2 else None,
+            "well_num": to_text(raw_row[3]) if len(raw_row) > 3 else None,
+            "well_type": to_text(raw_row[4]) if len(raw_row) > 4 else None,
+            "well_status": to_text(raw_row[5]) if len(raw_row) > 5 else None,
+            "pun_16ez": to_text(raw_row[6]) if len(raw_row) > 6 else None,
+            "pun_02a": to_text(raw_row[7]) if len(raw_row) > 7 else None,
+            "location_type": to_text(raw_row[8]) if len(raw_row) > 8 else None,
+            "surf_long_x": to_float(raw_row[9]) if len(raw_row) > 9 else None,
+            "surf_lat_y": to_float(raw_row[10]) if len(raw_row) > 10 else None,
+            "county": to_text(raw_row[11]) if len(raw_row) > 11 else None,
+            "section": to_text(raw_row[12]) if len(raw_row) > 12 else None,
+            "township": to_text(raw_row[13]) if len(raw_row) > 13 else None,
+            "range": to_text(raw_row[14]) if len(raw_row) > 14 else None,
+            "pm": to_text(raw_row[15]) if len(raw_row) > 15 else None,
+            "q1": to_text(raw_row[16]) if len(raw_row) > 16 else None,
+            "q2": to_text(raw_row[17]) if len(raw_row) > 17 else None,
+            "q3": to_text(raw_row[18]) if len(raw_row) > 18 else None,
+            "q4": to_text(raw_row[19]) if len(raw_row) > 19 else None,
+            "footage_ns": to_float(raw_row[20]) if len(raw_row) > 20 else None,
+            "ns": to_text(raw_row[21]) if len(raw_row) > 21 else None,
+            "footage_ew": to_float(raw_row[22]) if len(raw_row) > 22 else None,
+            "ew": to_text(raw_row[23]) if len(raw_row) > 23 else None,
+            "from_operator_number": to_int(raw_row[24]) if len(raw_row) > 24 else None,
+            "from_operator_name": to_text(raw_row[25]) if len(raw_row) > 25 else None,
+            "from_operator_address": to_text(raw_row[26]) if len(raw_row) > 26 else None,
+            "from_operator_phone": to_text(raw_row[27]) if len(raw_row) > 27 else None,
+            "to_operator_name": to_text(raw_row[28]) if len(raw_row) > 28 else None,
+            "to_operator_number": to_int(raw_row[29]) if len(raw_row) > 29 else None,
+            "to_operator_address": to_text(raw_row[30]) if len(raw_row) > 30 else None,
+            "to_operator_phone": to_text(raw_row[31]) if len(raw_row) > 31 else None,
         }
         rows.append(row)
 

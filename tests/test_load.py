@@ -1,11 +1,13 @@
 """Tests for the load task."""
 
+from datetime import date
 from unittest.mock import MagicMock, patch
 
 from pipeline.tasks.load import (
     load_earthquake_data,
     load_occ_wells_data,
     load_weather_data,
+    load_well_transfers,
 )
 
 SAMPLE_ROWS = [
@@ -126,6 +128,67 @@ def test_load_occ_wells_executes_and_returns_count():
 
     with patch("pipeline.tasks.load.create_engine", return_value=mock_engine):
         result = load_occ_wells_data.fn(SAMPLE_OCC_WELLS_ROWS, "postgresql+psycopg2://fake")
+
+    assert result == 1
+    assert mock_conn.execute.call_count == 1
+    mock_conn.commit.assert_called_once()
+
+
+SAMPLE_WELL_TRANSFER_ROWS = [
+    {
+        "event_date": date(2026, 1, 12),
+        "api_number": "3503702931",
+        "well_name": "SMITH",
+        "well_num": "1",
+        "well_type": "2DNC",
+        "well_status": "AC",
+        "pun_16ez": None,
+        "pun_02a": None,
+        "location_type": "Surface",
+        "surf_long_x": -96.504201,
+        "surf_lat_y": 35.662024,
+        "county": "037-CREEK",
+        "section": "30",
+        "township": "14N",
+        "range": "08E",
+        "pm": "IM",
+        "q1": "NW",
+        "q2": "SE",
+        "q3": "SE",
+        "q4": "SE",
+        "footage_ns": 240.0,
+        "ns": "S",
+        "footage_ew": 220.0,
+        "ew": "E",
+        "from_operator_number": 24793,
+        "from_operator_name": "1978 INVESTMENTS LLC",
+        "from_operator_address": "4320 E 9TH ST  CUSHING- OK 74023",
+        "from_operator_phone": "(918) 285-0093",
+        "to_operator_name": "CHIZUM OIL LLC",
+        "to_operator_number": 21860,
+        "to_operator_address": "346 S Lulu St  Wichita- KS 67211",
+        "to_operator_phone": "(316) 990-6248",
+    },
+]
+
+
+def test_load_well_transfers_returns_zero_for_empty_rows():
+    """Should return 0 immediately when given no rows — no DB calls."""
+    result = load_well_transfers.fn([], "postgresql+psycopg2://fake")
+    assert result == 0
+
+
+def test_load_well_transfers_executes_and_returns_count():
+    """Should execute SQL for each row and return the count."""
+    mock_conn = MagicMock()
+    mock_engine = MagicMock()
+    mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+    mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+
+    with patch("pipeline.tasks.load.create_engine", return_value=mock_engine):
+        result = load_well_transfers.fn(
+            SAMPLE_WELL_TRANSFER_ROWS, "postgresql+psycopg2://fake"
+        )
 
     assert result == 1
     assert mock_conn.execute.call_count == 1
