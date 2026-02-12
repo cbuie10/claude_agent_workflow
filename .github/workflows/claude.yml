@@ -49,6 +49,7 @@ jobs:
               "permissions": {
                 "allow": [
                   "Bash(uv run *)",
+                  "Bash(uv sync *)",
                   "Bash(cat *)",
                   "Read",
                   "Edit",
