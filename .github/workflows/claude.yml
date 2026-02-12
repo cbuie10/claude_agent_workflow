@@ -43,5 +43,4 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--max-turns 25"
-          allowed_tools: "Bash(uv run ruff check:*),Bash(uv run pytest:*),Bash(uv run python:*),Edit,MultiEdit,Write,Read,Glob,Grep"
+          claude_args: "--max-turns 25 --allowedTools 'Bash(uv run ruff check:*),Bash(uv run pytest:*),Bash(uv run python:*),Edit,MultiEdit,Write,Read,Glob,Grep'"
