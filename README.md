@@ -104,6 +104,7 @@ claude_agent_workflow/
 | [Docker & PostgreSQL](docs/docker-guide.md) | Container management, connecting to the database, querying data |
 | [Querying Data](docs/querying-data.md) | SQL examples for exploring earthquake and weather data |
 | [Claude Agent Guide](docs/claude-agent-guide.md) | How the autonomous agent works, creating issues, reviewing PRs |
+| [Troubleshooting](docs/troubleshooting.md) | Known issues, permission fixes, and debugging checklist |
 
 ## Environment Variables
 
