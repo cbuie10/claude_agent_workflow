@@ -1,9 +1,12 @@
 """Tests for the transform task."""
 
+from datetime import date, datetime
+
 from pipeline.tasks.transform import (
     transform_earthquake_data,
     transform_occ_wells_data,
     transform_weather_data,
+    transform_well_transfers_data,
 )
 
 # Sample GeoJSON that mimics real USGS data
@@ -265,4 +268,171 @@ def test_transform_occ_wells_strips_whitespace():
 def test_transform_occ_wells_handles_empty_csv():
     """Should return an empty list when CSV has only headers."""
     result = transform_occ_wells_data.fn("API,WELL_NAME\n")
+    assert result == []
+
+
+# Sample well transfers data that mimics real Excel row tuples
+SAMPLE_WELL_TRANSFERS_ROWS = [
+    (
+        datetime(2026, 1, 12),  # EventDate
+        "3503702931",  # API Number
+        "SMITH",  # WellName
+        "1",  # WellNum
+        "2DNC",  # Type
+        "AC",  # Status
+        None,  # PUN 16ez
+        None,  # PUN 02A
+        "Surface",  # Location Type
+        -96.504201,  # Surf_Long_X
+        35.662024,  # Surf_Lat_Y
+        "037-CREEK",  # County
+        "30",  # Section
+        "14N",  # Township
+        "08E",  # Range
+        "IM",  # PM
+        "NW",  # Q1
+        "SE",  # Q2
+        "SE",  # Q3
+        "SE",  # Q4
+        240,  # FootageNS
+        "S",  # NS
+        220,  # FootageEW
+        "E",  # EW
+        24793,  # FromOperatorNumber
+        "1978 INVESTMENTS LLC",  # FromOperatorName
+        "4320 E 9TH ST  CUSHING- OK 74023",  # FromOperatorAddressBlock
+        "(918) 285-0093",  # FromOperatorPhone
+        "CHIZUM OIL LLC",  # ToOperatorName
+        21860,  # ToOperatorNumber
+        "346 S Lulu St  Wichita- KS 67211",  # ToOperatorAddressBlock
+        "(316) 990-6248",  # ToOperatorPhone
+    ),
+    (
+        datetime(2026, 1, 13),
+        "3503702932",
+        "JONES",
+        2,  # numeric well num
+        "OIL",
+        "A",
+        None,
+        None,
+        "Surface",
+        None,  # empty longitude
+        None,  # empty latitude
+        "037-CREEK",
+        "31",
+        "14N",
+        "08E",
+        "IM",
+        None,
+        None,
+        None,
+        None,
+        None,  # empty footage
+        None,
+        None,
+        None,
+        None,  # empty from operator number
+        "TEST OPERATOR",
+        "123 MAIN ST",
+        None,
+        "ANOTHER OPERATOR",
+        None,  # empty to operator number
+        "456 OAK AVE",
+        None,
+    ),
+]
+
+
+def test_transform_well_transfers_returns_list():
+    """Should return a list of row dicts."""
+    result = transform_well_transfers_data.fn(SAMPLE_WELL_TRANSFERS_ROWS)
+    assert isinstance(result, list)
+    assert len(result) == 2
+
+
+def test_transform_well_transfers_maps_columns():
+    """Should correctly map Excel columns to snake_case database columns."""
+    result = transform_well_transfers_data.fn(SAMPLE_WELL_TRANSFERS_ROWS)
+    row = result[0]
+    assert row["api_number"] == "3503702931"
+    assert row["well_name"] == "SMITH"
+    assert row["well_num"] == "1"
+    assert row["well_type"] == "2DNC"
+    assert row["well_status"] == "AC"
+    assert row["county"] == "037-CREEK"
+    assert row["section"] == "30"
+    assert row["township"] == "14N"
+    assert row["range"] == "08E"
+    assert row["pm"] == "IM"
+
+
+def test_transform_well_transfers_converts_event_date():
+    """Should convert EventDate datetime to date."""
+    result = transform_well_transfers_data.fn(SAMPLE_WELL_TRANSFERS_ROWS)
+    row = result[0]
+    assert isinstance(row["event_date"], date)
+    assert row["event_date"] == date(2026, 1, 12)
+
+
+def test_transform_well_transfers_converts_floats():
+    """Should convert longitude, latitude, and footage to floats."""
+    result = transform_well_transfers_data.fn(SAMPLE_WELL_TRANSFERS_ROWS)
+    row = result[0]
+    assert isinstance(row["surf_long_x"], float)
+    assert row["surf_long_x"] == -96.504201
+    assert isinstance(row["surf_lat_y"], float)
+    assert row["surf_lat_y"] == 35.662024
+    assert isinstance(row["footage_ns"], float)
+    assert row["footage_ns"] == 240.0
+    assert isinstance(row["footage_ew"], float)
+    assert row["footage_ew"] == 220.0
+
+
+def test_transform_well_transfers_converts_ints():
+    """Should convert operator numbers to ints."""
+    result = transform_well_transfers_data.fn(SAMPLE_WELL_TRANSFERS_ROWS)
+    row = result[0]
+    assert isinstance(row["from_operator_number"], int)
+    assert row["from_operator_number"] == 24793
+    assert isinstance(row["to_operator_number"], int)
+    assert row["to_operator_number"] == 21860
+
+
+def test_transform_well_transfers_handles_none_values():
+    """Should convert None and empty values to None."""
+    result = transform_well_transfers_data.fn(SAMPLE_WELL_TRANSFERS_ROWS)
+    row = result[1]
+    assert row["surf_long_x"] is None
+    assert row["surf_lat_y"] is None
+    assert row["footage_ns"] is None
+    assert row["footage_ew"] is None
+    assert row["from_operator_number"] is None
+    assert row["to_operator_number"] is None
+    assert row["q1"] is None
+
+
+def test_transform_well_transfers_converts_numeric_well_num_to_text():
+    """Should convert numeric well_num to text."""
+    result = transform_well_transfers_data.fn(SAMPLE_WELL_TRANSFERS_ROWS)
+    row = result[1]
+    assert isinstance(row["well_num"], str)
+    assert row["well_num"] == "2"
+
+
+def test_transform_well_transfers_skips_empty_api():
+    """Should skip rows where API Number is empty or None."""
+    rows_with_empty_api = [
+        (datetime(2026, 1, 12), None, "WELL", "1"),  # None API
+        (datetime(2026, 1, 13), "", "WELL2", "2"),  # Empty API
+        (datetime(2026, 1, 14), "3503702931", "WELL3", "3"),  # Valid
+    ]
+    result = transform_well_transfers_data.fn(rows_with_empty_api)
+    assert len(result) == 1
+    assert result[0]["api_number"] == "3503702931"
+
+
+def test_transform_well_transfers_handles_empty_list():
+    """Should return an empty list when given no rows."""
+    result = transform_well_transfers_data.fn([])
     assert result == []

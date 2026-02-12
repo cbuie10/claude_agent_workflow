@@ -127,3 +127,73 @@ def load_occ_wells_data(rows: list[dict], connection_url: str) -> int:
         conn.commit()
 
     return len(rows)
+
+
+@task(name="load_well_transfers_data")
+def load_well_transfers_data(rows: list[dict], connection_url: str) -> int:
+    """Upsert well transfers rows into PostgreSQL.
+
+    Uses ON CONFLICT to make the load idempotent — safe to re-run
+    without creating duplicate rows. Composite primary key: (api_number, event_date).
+    """
+    if not rows:
+        return 0
+
+    upsert_sql = text("""
+        INSERT INTO well_transfers (
+            event_date, api_number, well_name, well_num, well_type, well_status,
+            pun_16ez, pun_02a, location_type, surf_long_x, surf_lat_y,
+            county, section, township, range, pm, q1, q2, q3, q4,
+            footage_ns, ns, footage_ew, ew, from_operator_number,
+            from_operator_name, from_operator_address, from_operator_phone,
+            to_operator_name, to_operator_number, to_operator_address,
+            to_operator_phone
+        ) VALUES (
+            :event_date, :api_number, :well_name, :well_num, :well_type, :well_status,
+            :pun_16ez, :pun_02a, :location_type, :surf_long_x, :surf_lat_y,
+            :county, :section, :township, :range, :pm, :q1, :q2, :q3, :q4,
+            :footage_ns, :ns, :footage_ew, :ew, :from_operator_number,
+            :from_operator_name, :from_operator_address, :from_operator_phone,
+            :to_operator_name, :to_operator_number, :to_operator_address,
+            :to_operator_phone
+        )
+        ON CONFLICT (api_number, event_date) DO UPDATE SET
+            well_name = EXCLUDED.well_name,
+            well_num = EXCLUDED.well_num,
+            well_type = EXCLUDED.well_type,
+            well_status = EXCLUDED.well_status,
+            pun_16ez = EXCLUDED.pun_16ez,
+            pun_02a = EXCLUDED.pun_02a,
+            location_type = EXCLUDED.location_type,
+            surf_long_x = EXCLUDED.surf_long_x,
+            surf_lat_y = EXCLUDED.surf_lat_y,
+            county = EXCLUDED.county,
+            section = EXCLUDED.section,
+            township = EXCLUDED.township,
+            range = EXCLUDED.range,
+            pm = EXCLUDED.pm,
+            q1 = EXCLUDED.q1,
+            q2 = EXCLUDED.q2,
+            q3 = EXCLUDED.q3,
+            q4 = EXCLUDED.q4,
+            footage_ns = EXCLUDED.footage_ns,
+            ns = EXCLUDED.ns,
+            footage_ew = EXCLUDED.footage_ew,
+            ew = EXCLUDED.ew,
+            from_operator_number = EXCLUDED.from_operator_number,
+            from_operator_name = EXCLUDED.from_operator_name,
+            from_operator_address = EXCLUDED.from_operator_address,
+            from_operator_phone = EXCLUDED.from_operator_phone,
+            to_operator_name = EXCLUDED.to_operator_name,
+            to_operator_number = EXCLUDED.to_operator_number,
+            to_operator_address = EXCLUDED.to_operator_address,
+            to_operator_phone = EXCLUDED.to_operator_phone
+    """)
+
+    engine = create_engine(connection_url)
+    with engine.connect() as conn:
+        for row in rows:
+            conn.execute(upsert_sql, row)
+        conn.commit()
+
+    return len(rows)

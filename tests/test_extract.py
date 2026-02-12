@@ -1,11 +1,15 @@
 """Tests for the extract task."""
 
+import sys
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from pipeline.tasks.extract import (
     extract_earthquake_data,
     extract_occ_wells_data,
     extract_weather_data,
+    extract_well_transfers_data,
 )
 
 
@@ -110,3 +114,48 @@ def test_extract_occ_wells_calls_correct_url():
         extract_occ_wells_data.fn("https://oklahoma.gov/occ/wells.csv")
 
     mock_get.assert_called_once_with("https://oklahoma.gov/occ/wells.csv", timeout=120.0)
+
+
+@pytest.mark.skipif("openpyxl" not in sys.modules, reason="openpyxl not installed")
+def test_extract_well_transfers_returns_list_of_tuples():
+    """extract_well_transfers_data should return list of row tuples from Excel."""
+    # Create a fake HTTP response with Excel bytes
+    mock_response = MagicMock()
+    # Mock openpyxl workbook
+    mock_workbook = MagicMock()
+    mock_sheet = MagicMock()
+    # Simulate header + 2 data rows
+    mock_sheet.iter_rows.return_value = [
+        ("EventDate", "API Number", "WellName"),  # header
+        ("2026-01-12", "3503702931", "SMITH"),
+        ("2026-01-13", "3503702932", "JONES"),
+    ]
+    mock_workbook.active = mock_sheet
+    mock_response.content = b"fake-excel-bytes"
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response):
+        with patch("openpyxl.load_workbook", return_value=mock_workbook):
+            result = extract_well_transfers_data.fn("https://fake-url.com/file.xlsx")
+
+    assert isinstance(result, list)
+    assert len(result) == 2  # Header skipped
+    assert result[0] == ("2026-01-12", "3503702931", "SMITH")
+
+
+@pytest.mark.skipif("openpyxl" not in sys.modules, reason="openpyxl not installed")
+def test_extract_well_transfers_calls_correct_url():
+    """Verify the task passes the URL through to httpx.get with correct timeout."""
+    mock_response = MagicMock()
+    mock_workbook = MagicMock()
+    mock_sheet = MagicMock()
+    mock_sheet.iter_rows.return_value = [("EventDate",), ("2026-01-12",)]
+    mock_workbook.active = mock_sheet
+    mock_response.content = b"fake-excel-bytes"
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response) as mock_get:
+        with patch("openpyxl.load_workbook", return_value=mock_workbook):
+            extract_well_transfers_data.fn("https://oklahoma.gov/occ/transfers.xlsx")
+
+    mock_get.assert_called_once_with("https://oklahoma.gov/occ/transfers.xlsx", timeout=60.0)

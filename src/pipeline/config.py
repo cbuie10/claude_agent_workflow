@@ -32,3 +32,8 @@ OCC_WELLS_CSV_URL = os.getenv(
     "OCC_WELLS_CSV_URL",
     "https://oklahoma.gov/content/dam/ok/en/occ/documents/og/ogdatafiles/rbdms-wells.csv",
 )
+
+WELL_TRANSFERS_XLSX_URL = os.getenv(
+    "WELL_TRANSFERS_XLSX_URL",
+    "https://oklahoma.gov/content/dam/ok/en/occ/documents/og/ogdatafiles/well-transfers-daily.xlsx",
+)
