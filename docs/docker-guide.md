@@ -1,24 +1,28 @@
 # Docker & PostgreSQL Guide
 
-This project uses Docker to run PostgreSQL 16. All data is stored in a Docker volume that persists across container restarts.
+This project uses Docker to run PostgreSQL 16 and a self-hosted Prefect v3 server. All data is stored in a Docker volume that persists across container restarts.
 
 ## Container Management
 
-### Start the database
+### Start everything
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-The `-d` flag runs it in detached (background) mode.
+This starts two containers:
+- **pipeline-postgres** — PostgreSQL 16 database
+- **prefect-server** — Prefect v3 dashboard and API
 
-### Stop the database
+The `-d` flag runs them in detached (background) mode. The Prefect server waits for PostgreSQL to be healthy before starting.
+
+### Stop everything
 
 ```bash
 docker compose -f docker/docker-compose.yml down
 ```
 
-Data is preserved in the `pgdata` volume. Your rows will still be there when you start again.
+Data is preserved in the `pgdata` volume. Your rows and Prefect run history will still be there when you start again.
 
 ### Stop and delete all data
 
@@ -26,7 +30,7 @@ Data is preserved in the `pgdata` volume. Your rows will still be there when you
 docker compose -f docker/docker-compose.yml down -v
 ```
 
-The `-v` flag removes the volume. Next time you start, the database will be empty and tables will be recreated from `docker/init.sql`.
+The `-v` flag removes the volume. Next time you start, the database will be empty, tables will be recreated from `docker/init.sql`, and Prefect run history will be cleared.
 
 ### Check container status
 
@@ -34,12 +38,13 @@ The `-v` flag removes the volume. Next time you start, the database will be empt
 docker ps
 ```
 
-Look for `pipeline-postgres` in the output.
+Look for both `pipeline-postgres` and `prefect-server` in the output.
 
 ### View container logs
 
 ```bash
 docker logs pipeline-postgres
+docker logs prefect-server
 ```
 
 Add `-f` to follow/stream logs in real time.
@@ -171,3 +176,42 @@ Then update your `DATABASE_URL` to use port 5433.
 docker compose -f docker/docker-compose.yml down -v
 docker compose -f docker/docker-compose.yml up -d
 ```
+
+## Prefect Server
+
+The Prefect v3 server runs alongside PostgreSQL and provides a web dashboard for viewing flow runs.
+
+### Access the Prefect UI
+
+Open [http://localhost:4200](http://localhost:4200) in your browser after starting the containers.
+
+### How it works
+
+- Prefect stores its metadata in a separate `prefect_db` database on the same PostgreSQL instance
+- The `00-create-prefect-db.sh` init script creates this database automatically on first start
+- When `PREFECT_API_URL=http://localhost:4200/api` is set (via `.env`), flows automatically report runs to the server
+- Without `PREFECT_API_URL` set, flows still work but runs don't appear in the UI
+
+### View Prefect server logs
+
+```bash
+docker logs prefect-server
+docker logs -f prefect-server   # follow/stream
+```
+
+### Check Prefect server health
+
+```bash
+curl http://localhost:4200/api/health
+```
+
+### Port 4200 already in use
+
+Change the port mapping in `docker-compose.yml`:
+
+```yaml
+ports:
+  - "4201:4200"  # Use 4201 on host
+```
+
+Then update `PREFECT_API_URL` in your `.env` to `http://localhost:4201/api`.

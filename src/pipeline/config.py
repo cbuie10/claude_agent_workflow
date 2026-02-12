@@ -11,6 +11,11 @@ DATABASE_URL = os.getenv(
     "postgresql+psycopg2://pipeline_user:pipeline_pass@localhost:5432/pipeline_db",
 )
 
+PREFECT_API_URL = os.getenv(
+    "PREFECT_API_URL",
+    "http://localhost:4200/api",
+)
+
 EARTHQUAKE_API_URL = os.getenv(
     "EARTHQUAKE_API_URL",
     "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson",

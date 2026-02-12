@@ -53,11 +53,14 @@ git clone https://github.com/cbuie10/claude_agent_workflow.git
 cd claude_agent_workflow
 uv sync --all-extras
 
-# Start PostgreSQL
+# Start PostgreSQL and Prefect Server
 docker compose -f docker/docker-compose.yml up -d
 
-# Run a pipeline
+# Run a pipeline (results appear in the Prefect UI)
 uv run python -m pipeline.flows.earthquake_flow
+
+# Open the Prefect dashboard
+open http://localhost:4200
 
 # Run tests
 uv run pytest tests/ -v
@@ -74,8 +77,9 @@ claude_agent_workflow/
 │   └── ISSUE_TEMPLATE/
 │       └── pipeline_request.md   # Structured issue template
 ├── docker/
-│   ├── docker-compose.yml        # PostgreSQL container
-│   └── init.sql                  # Table definitions
+│   ├── docker-compose.yml        # PostgreSQL + Prefect server
+│   ├── 00-create-prefect-db.sh   # Prefect database init script
+│   └── init.sql                  # Pipeline table definitions
 ├── src/pipeline/
 │   ├── config.py                 # Environment variable config
 │   ├── db.py                     # DB connection helper
@@ -106,6 +110,7 @@ claude_agent_workflow/
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `postgresql+psycopg2://pipeline_user:pipeline_pass@localhost:5432/pipeline_db` | PostgreSQL connection string |
+| `PREFECT_API_URL` | `http://localhost:4200/api` | Prefect server API endpoint |
 | `EARTHQUAKE_API_URL` | USGS all-hour feed | Earthquake data source |
 | `WEATHER_API_URL` | Open-Meteo NYC forecast | Weather data source |
 | `MIN_MAGNITUDE` | `0.0` | Minimum earthquake magnitude to load |

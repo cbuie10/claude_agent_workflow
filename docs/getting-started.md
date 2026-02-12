@@ -31,26 +31,25 @@ This installs all runtime dependencies (Prefect, SQLAlchemy, httpx, etc.) and de
 
 The `--all-extras` flag includes dev dependencies defined in `[project.optional-dependencies]`.
 
-## 3. Start PostgreSQL
+## 3. Start PostgreSQL & Prefect Server
 
-The database runs in a Docker container defined in `docker/docker-compose.yml`:
+The database and Prefect server run in Docker containers defined in `docker/docker-compose.yml`:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-This starts PostgreSQL 16 with:
-- **User**: `pipeline_user`
-- **Password**: `pipeline_pass`
-- **Database**: `pipeline_db`
-- **Port**: `5432` (localhost)
-- **Tables**: Created automatically from `docker/init.sql`
+This starts two containers:
+- **PostgreSQL 16** — pipeline data (user: `pipeline_user`, password: `pipeline_pass`, port: `5432`)
+- **Prefect Server** — flow run dashboard at [http://localhost:4200](http://localhost:4200)
 
-Verify it's running:
+Tables are created automatically from `docker/init.sql`.
+
+Verify they're running:
 
 ```bash
 docker ps
-# Should show pipeline-postgres container in "Up" status
+# Should show pipeline-postgres and prefect-server containers in "Up" status
 ```
 
 ## 4. Run Your First Pipeline
@@ -85,7 +84,11 @@ Loading 24 rows into PostgreSQL
 Pipeline complete: 24 rows loaded
 ```
 
-## 5. Verify the Data
+## 5. View in Prefect UI
+
+Open [http://localhost:4200](http://localhost:4200) in your browser. You should see the flow run(s) you just executed, with task-level detail, logs, and timing.
+
+## 6. Verify the Data
 
 Connect to PostgreSQL and check the rows:
 
@@ -101,7 +104,7 @@ SELECT COUNT(*) FROM weather_forecasts;
 
 See [Querying Data](querying-data.md) for more SQL examples.
 
-## 6. Run the Tests
+## 7. Run the Tests
 
 ```bash
 uv run pytest tests/ -v
@@ -109,7 +112,7 @@ uv run pytest tests/ -v
 
 All 24 tests should pass. These tests mock all external calls (HTTP and database), so they run fast and don't require Docker.
 
-## 7. Lint the Code
+## 8. Lint the Code
 
 ```bash
 uv run ruff check src/ tests/
