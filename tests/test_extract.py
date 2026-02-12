@@ -2,7 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
-from pipeline.tasks.extract import extract_earthquake_data, extract_weather_data
+from pipeline.tasks.extract import (
+    extract_earthquake_data,
+    extract_occ_wells_data,
+    extract_weather_data,
+)
 
 
 def test_extract_returns_dict():
@@ -78,3 +82,31 @@ def test_extract_weather_calls_correct_url():
         extract_weather_data.fn("https://api.open-meteo.com/v1/forecast")
 
     mock_get.assert_called_once_with("https://api.open-meteo.com/v1/forecast", timeout=30.0)
+
+
+def test_extract_occ_wells_returns_csv_text():
+    """extract_occ_wells_data should return CSV text as a string."""
+    # Create a fake HTTP response with CSV text
+    mock_response = MagicMock()
+    mock_response.text = "API,WELL_NAME,WELL_NUM\n3500100002,PENN MUTUAL LIFE,#1\n"
+    mock_response.raise_for_status = MagicMock()
+
+    # Replace httpx.get with our fake — so no real HTTP call is made
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response):
+        result = extract_occ_wells_data.fn("https://fake-url.com/wells.csv")
+
+    assert isinstance(result, str)
+    assert "API,WELL_NAME,WELL_NUM" in result
+    assert "3500100002" in result
+
+
+def test_extract_occ_wells_calls_correct_url():
+    """Verify the task passes the URL through to httpx.get with extended timeout."""
+    mock_response = MagicMock()
+    mock_response.text = "API\n3500100002\n"
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("pipeline.tasks.extract.httpx.get", return_value=mock_response) as mock_get:
+        extract_occ_wells_data.fn("https://oklahoma.gov/occ/wells.csv")
+
+    mock_get.assert_called_once_with("https://oklahoma.gov/occ/wells.csv", timeout=120.0)

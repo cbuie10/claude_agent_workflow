@@ -27,3 +27,8 @@ WEATHER_API_URL = os.getenv(
     "WEATHER_API_URL",
     "https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.006&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&temperature_unit=fahrenheit&forecast_days=1",
 )
+
+OCC_WELLS_CSV_URL = os.getenv(
+    "OCC_WELLS_CSV_URL",
+    "https://oklahoma.gov/content/dam/ok/en/occ/documents/og/ogdatafiles/rbdms-wells.csv",
+)

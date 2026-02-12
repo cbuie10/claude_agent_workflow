@@ -2,7 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
-from pipeline.tasks.load import load_earthquake_data, load_weather_data
+from pipeline.tasks.load import (
+    load_earthquake_data,
+    load_occ_wells_data,
+    load_weather_data,
+)
 
 SAMPLE_ROWS = [
     {
@@ -72,6 +76,56 @@ def test_load_weather_executes_and_returns_count():
 
     with patch("pipeline.tasks.load.create_engine", return_value=mock_engine):
         result = load_weather_data.fn(SAMPLE_WEATHER_ROWS, "postgresql+psycopg2://fake")
+
+    assert result == 1
+    assert mock_conn.execute.call_count == 1
+    mock_conn.commit.assert_called_once()
+
+
+SAMPLE_OCC_WELLS_ROWS = [
+    {
+        "api": "3500100002",
+        "well_records_docs": "http://example.com",
+        "well_name": "PENN MUTUAL LIFE",
+        "well_num": "#1",
+        "operator": "OTC/OCC NOT ASSIGNED",
+        "well_status": "PA",
+        "well_type": "DRY",
+        "symbol_class": "PLUGGED",
+        "sh_lat": 35.894723,
+        "sh_lon": -94.78241,
+        "county": "ADAIR",
+        "section": "5.00",
+        "township": "16N",
+        "range": "24E",
+        "qtr4": "NE",
+        "qtr3": "NW",
+        "qtr2": "SE",
+        "qtr1": "NW",
+        "pm": "IM",
+        "footage_ew": 330.0,
+        "ew": "E",
+        "footage_ns": 990.0,
+        "ns": "S",
+    },
+]
+
+
+def test_load_occ_wells_returns_zero_for_empty_rows():
+    """Should return 0 immediately when given no rows — no DB calls."""
+    result = load_occ_wells_data.fn([], "postgresql+psycopg2://fake")
+    assert result == 0
+
+
+def test_load_occ_wells_executes_and_returns_count():
+    """Should execute SQL for each row and return the count."""
+    mock_conn = MagicMock()
+    mock_engine = MagicMock()
+    mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+    mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+
+    with patch("pipeline.tasks.load.create_engine", return_value=mock_engine):
+        result = load_occ_wells_data.fn(SAMPLE_OCC_WELLS_ROWS, "postgresql+psycopg2://fake")
 
     assert result == 1
     assert mock_conn.execute.call_count == 1
