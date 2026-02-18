@@ -27,6 +27,7 @@ export PREFECT_API_URL=http://localhost:4200/api
 uv run python -m pipeline.flows.earthquake_flow
 uv run python -m pipeline.flows.weather_flow
 uv run python -m pipeline.flows.oklahoma_wells_flow
+uv run python -m pipeline.flows.well_transfers_flow
 ```
 
 > **Note:** The Oklahoma wells pipeline downloads ~126 MB and may take a few minutes.
@@ -53,6 +54,7 @@ Then run SQL:
 SELECT COUNT(*) FROM earthquakes;
 SELECT COUNT(*) FROM weather_forecasts;
 SELECT COUNT(*) FROM oklahoma_wells;
+SELECT COUNT(*) FROM well_transfers;
 ```
 
 Type `\q` to exit psql.

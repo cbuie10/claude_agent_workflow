@@ -43,6 +43,16 @@ GitHub Issue          Claude Agent           Pull Request          You
 - **Table**: `weather_forecasts` — temperature, humidity, wind speed (hourly, NYC)
 - **Run**: `uv run python -m pipeline.flows.weather_flow`
 
+### Oklahoma Wells ETL
+- **Source**: [OCC RBDMS Wells CSV](https://oklahoma.gov/content/dam/ok/en/occ/documents/og/ogdatafiles/rbdms-wells.csv) (~126 MB, no auth required)
+- **Table**: `oklahoma_wells` — API number, operator, well status/type, county, lat/lon, legal description
+- **Run**: `uv run python -m pipeline.flows.oklahoma_wells_flow`
+
+### Well Transfers ETL
+- **Source**: [OCC Well Transfers Daily Excel](https://oklahoma.gov/content/dam/ok/en/occ/documents/og/ogdatafiles/well-transfers-daily.xlsx) (no auth required)
+- **Table**: `well_transfers` — transfer date, API number, from/to operator, well details, location
+- **Run**: `uv run python -m pipeline.flows.well_transfers_flow`
+
 ## Quick Start
 
 ```bash
@@ -84,13 +94,15 @@ claude_agent_workflow/
 │   ├── config.py                 # Environment variable config
 │   ├── db.py                     # DB connection helper
 │   ├── flows/
-│   │   ├── earthquake_flow.py    # Earthquake ETL flow
-│   │   └── weather_flow.py       # Weather forecast ETL flow
+│   │   ├── earthquake_flow.py       # Earthquake ETL flow
+│   │   ├── weather_flow.py          # Weather forecast ETL flow
+│   │   ├── oklahoma_wells_flow.py   # Oklahoma wells ETL flow
+│   │   └── well_transfers_flow.py   # Well transfers ETL flow
 │   └── tasks/
 │       ├── extract.py            # API fetch tasks
 │       ├── transform.py          # Data reshaping tasks
 │       └── load.py               # PostgreSQL upsert tasks
-├── tests/                        # 24 unit + integration tests
+├── tests/                        # 52 unit tests
 ├── docs/                         # Detailed guides
 ├── CLAUDE.md                     # Agent instructions
 └── pyproject.toml                # Dependencies and tool config
@@ -102,7 +114,8 @@ claude_agent_workflow/
 |-------|-------------|
 | [Getting Started](docs/getting-started.md) | Prerequisites, installation, first pipeline run |
 | [Docker & PostgreSQL](docs/docker-guide.md) | Container management, connecting to the database, querying data |
-| [Querying Data](docs/querying-data.md) | SQL examples for exploring earthquake and weather data |
+| [Querying Data](docs/querying-data.md) | SQL examples for exploring all pipeline data |
+| [Oklahoma Wells Data Model](docs/oklahoma-wells-data-model.md) | ERD, column mapping, and join queries for wells + transfers |
 | [Claude Agent Guide](docs/claude-agent-guide.md) | How the autonomous agent works, creating issues, reviewing PRs |
 | [Troubleshooting](docs/troubleshooting.md) | Known issues, permission fixes, and debugging checklist |
 
@@ -115,6 +128,8 @@ claude_agent_workflow/
 | `EARTHQUAKE_API_URL` | USGS all-hour feed | Earthquake data source |
 | `WEATHER_API_URL` | Open-Meteo NYC forecast | Weather data source |
 | `MIN_MAGNITUDE` | `0.0` | Minimum earthquake magnitude to load |
+| `OCC_WELLS_CSV_URL` | OCC RBDMS wells CSV | Oklahoma wells data source |
+| `WELL_TRANSFERS_XLSX_URL` | OCC well transfers daily Excel | Well transfers data source |
 
 ## Development
 

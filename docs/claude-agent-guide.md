@@ -145,7 +145,7 @@ This file tells Claude:
 ### `.github/workflows/claude.yml` (workflow config)
 
 Key settings:
-- **`claude_args: "--max-turns 50"`** — allows up to 50 API round-trips (complex pipelines need 30-40)
+- **`claude_args: "--max-turns 75"`** — allows up to 75 API round-trips (complex pipelines need 50-75)
 - **`settings.permissions.allow`** — Bash commands the agent can run (scoped to `uv run *`)
 
 ### `.github/ISSUE_TEMPLATE/pipeline_request.md`
@@ -154,7 +154,7 @@ Structured template that guides both you and the agent. The acceptance criteria 
 
 ## Costs
 
-Each agent run costs Anthropic API credits based on the number of turns. A typical pipeline build uses 30-40 turns. Monitor usage in your Anthropic dashboard.
+Each agent run costs Anthropic API credits based on the number of turns. A typical pipeline build uses 50-75 turns. Monitor usage in your Anthropic dashboard.
 
 ## Troubleshooting
 
@@ -166,7 +166,7 @@ Each agent run costs Anthropic API credits based on the number of turns. A typic
 
 ### Agent hits max turns
 
-If the agent runs out of turns before completing, it may not push its branch. Increase `--max-turns` in `claude.yml` (default: 50).
+If the agent runs out of turns before completing, it may not push its branch. Increase `--max-turns` in `claude.yml` (current: 75).
 
 ### Agent writes code that doesn't follow conventions
 

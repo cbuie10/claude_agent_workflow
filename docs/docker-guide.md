@@ -128,6 +128,75 @@ The schema is defined in `docker/init.sql` and created automatically when the co
 | `wind_speed_mph` | `REAL` | Wind speed in mph |
 | `fetched_at` | `TIMESTAMP WITH TIME ZONE` | When the row was loaded (auto-set) |
 
+### `oklahoma_wells` table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `api` | `TEXT PRIMARY KEY` | 10-digit API well number |
+| `well_records_docs` | `TEXT` | Well records documentation URL |
+| `well_name` | `TEXT` | Name of the well |
+| `well_num` | `TEXT` | Well number |
+| `operator` | `TEXT` | Current operator name |
+| `well_status` | `TEXT` | Well status code (PA, AC, TA, etc.) |
+| `well_type` | `TEXT` | Well type code (OIL, GAS, DRY, etc.) |
+| `symbol_class` | `TEXT` | Map symbol classification |
+| `sh_lat` | `DOUBLE PRECISION` | Surface hole latitude |
+| `sh_lon` | `DOUBLE PRECISION` | Surface hole longitude |
+| `county` | `TEXT` | Oklahoma county |
+| `section` | `TEXT` | PLSS section |
+| `township` | `TEXT` | PLSS township |
+| `range` | `TEXT` | PLSS range |
+| `qtr4` | `TEXT` | Quarter-quarter-quarter-quarter section |
+| `qtr3` | `TEXT` | Quarter-quarter-quarter section |
+| `qtr2` | `TEXT` | Quarter-quarter section |
+| `qtr1` | `TEXT` | Quarter section |
+| `pm` | `TEXT` | Principal meridian |
+| `footage_ew` | `REAL` | Footage east/west from section line |
+| `ew` | `TEXT` | East or West indicator |
+| `footage_ns` | `REAL` | Footage north/south from section line |
+| `ns` | `TEXT` | North or South indicator |
+| `inserted_at` | `TIMESTAMP WITH TIME ZONE` | When the row was loaded (auto-set) |
+
+### `well_transfers` table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `event_date` | `DATE` | Transfer date (part of composite PK) |
+| `api_number` | `TEXT` | API well number (part of composite PK) |
+| `well_name` | `TEXT` | Name of the well |
+| `well_num` | `TEXT` | Well number |
+| `well_type` | `TEXT` | Well type code |
+| `well_status` | `TEXT` | Well status code |
+| `pun_16ez` | `TEXT` | Production unit number (1016ez form) |
+| `pun_02a` | `TEXT` | Production unit number (1002A form) |
+| `location_type` | `TEXT` | Location record type |
+| `surf_long_x` | `DOUBLE PRECISION` | Surface longitude |
+| `surf_lat_y` | `DOUBLE PRECISION` | Surface latitude |
+| `county` | `TEXT` | Oklahoma county |
+| `section` | `TEXT` | PLSS section |
+| `township` | `TEXT` | PLSS township |
+| `range` | `TEXT` | PLSS range |
+| `pm` | `TEXT` | Principal meridian |
+| `q1` | `TEXT` | Quarter section 1 (160 ac) |
+| `q2` | `TEXT` | Quarter section 2 (40 ac) |
+| `q3` | `TEXT` | Quarter section 3 (10 ac) |
+| `q4` | `TEXT` | Quarter section 4 (2.5 ac) |
+| `footage_ns` | `REAL` | Footage north/south from section line |
+| `ns` | `TEXT` | North or South indicator |
+| `footage_ew` | `REAL` | Footage east/west from section line |
+| `ew` | `TEXT` | East or West indicator |
+| `from_operator_number` | `INTEGER` | Previous operator OCC ID |
+| `from_operator_name` | `TEXT` | Previous operator name |
+| `from_operator_address` | `TEXT` | Previous operator address |
+| `from_operator_phone` | `TEXT` | Previous operator phone |
+| `to_operator_name` | `TEXT` | New operator name |
+| `to_operator_number` | `INTEGER` | New operator OCC ID |
+| `to_operator_address` | `TEXT` | New operator address |
+| `to_operator_phone` | `TEXT` | New operator phone |
+| `inserted_at` | `TIMESTAMP WITH TIME ZONE` | When the row was loaded (auto-set) |
+
+> **Note:** `well_transfers` uses a composite primary key of `(api_number, event_date)`. See [Oklahoma Wells Data Model](oklahoma-wells-data-model.md) for the relationship between these two tables.
+
 ## Adding a New Table
 
 When Claude (or you) builds a new pipeline, a new table definition goes in `docker/init.sql`:

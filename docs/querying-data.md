@@ -1,6 +1,6 @@
 # Querying Data
 
-SQL examples for exploring the earthquake and weather data loaded by the pipelines.
+SQL examples for exploring the earthquake, weather, Oklahoma wells, and well transfers data loaded by the pipelines.
 
 ## Connecting
 
@@ -15,6 +15,8 @@ docker exec -it pipeline-postgres psql -U pipeline_user -d pipeline_db
 | `\dt` | List all tables |
 | `\d earthquakes` | Show earthquake table schema |
 | `\d weather_forecasts` | Show weather table schema |
+| `\d oklahoma_wells` | Show Oklahoma wells table schema |
+| `\d well_transfers` | Show well transfers table schema |
 | `\x` | Toggle expanded display (wide rows) |
 | `\q` | Exit psql |
 
@@ -160,6 +162,98 @@ FROM weather_forecasts
 ORDER BY forecast_time;
 ```
 
+## Oklahoma Wells Queries
+
+### Row count
+
+```sql
+SELECT COUNT(*) FROM oklahoma_wells;
+```
+
+### Wells by county
+
+```sql
+SELECT county, COUNT(*) AS well_count
+FROM oklahoma_wells
+GROUP BY county
+ORDER BY well_count DESC
+LIMIT 15;
+```
+
+### Search wells by operator
+
+```sql
+SELECT api, well_name, operator, well_status, county
+FROM oklahoma_wells
+WHERE operator ILIKE '%devon%'
+ORDER BY well_name
+LIMIT 20;
+```
+
+### Well status summary
+
+```sql
+SELECT well_status, COUNT(*) AS count
+FROM oklahoma_wells
+GROUP BY well_status
+ORDER BY count DESC;
+```
+
+### Wells by type
+
+```sql
+SELECT well_type, COUNT(*) AS count
+FROM oklahoma_wells
+GROUP BY well_type
+ORDER BY count DESC;
+```
+
+## Well Transfers Queries
+
+### Row count
+
+```sql
+SELECT COUNT(*) FROM well_transfers;
+```
+
+### Most recent transfers
+
+```sql
+SELECT event_date, api_number, well_name, from_operator_name, to_operator_name
+FROM well_transfers
+ORDER BY event_date DESC
+LIMIT 10;
+```
+
+### Transfer history for a specific well
+
+```sql
+SELECT event_date, from_operator_name, to_operator_name
+FROM well_transfers
+WHERE api_number = '3503702931'
+ORDER BY event_date;
+```
+
+### Top acquirers (operators receiving the most wells)
+
+```sql
+SELECT to_operator_name, COUNT(*) AS acquisitions
+FROM well_transfers
+GROUP BY to_operator_name
+ORDER BY acquisitions DESC
+LIMIT 10;
+```
+
+### Transfers by county
+
+```sql
+SELECT county, COUNT(*) AS transfer_count
+FROM well_transfers
+GROUP BY county
+ORDER BY transfer_count DESC
+LIMIT 10;
+```
+
 ## Cross-Table Queries
 
 ### Timestamp comparison (when each pipeline last ran)
@@ -167,7 +261,11 @@ ORDER BY forecast_time;
 ```sql
 SELECT 'earthquakes' AS pipeline, MAX(inserted_at) AS last_loaded FROM earthquakes
 UNION ALL
-SELECT 'weather_forecasts', MAX(fetched_at) FROM weather_forecasts;
+SELECT 'weather_forecasts', MAX(fetched_at) FROM weather_forecasts
+UNION ALL
+SELECT 'oklahoma_wells', MAX(inserted_at) FROM oklahoma_wells
+UNION ALL
+SELECT 'well_transfers', MAX(inserted_at) FROM well_transfers;
 ```
 
 ### Row count summary
@@ -175,7 +273,11 @@ SELECT 'weather_forecasts', MAX(fetched_at) FROM weather_forecasts;
 ```sql
 SELECT 'earthquakes' AS table_name, COUNT(*) AS rows FROM earthquakes
 UNION ALL
-SELECT 'weather_forecasts', COUNT(*) FROM weather_forecasts;
+SELECT 'weather_forecasts', COUNT(*) FROM weather_forecasts
+UNION ALL
+SELECT 'oklahoma_wells', COUNT(*) FROM oklahoma_wells
+UNION ALL
+SELECT 'well_transfers', COUNT(*) FROM well_transfers;
 ```
 
 ## Exporting Data
@@ -192,16 +294,30 @@ docker exec -it pipeline-postgres psql -U pipeline_user -d pipeline_db \
   -c "COPY weather_forecasts TO STDOUT WITH CSV HEADER" > weather.csv
 ```
 
+```bash
+docker exec -it pipeline-postgres psql -U pipeline_user -d pipeline_db \
+  -c "COPY oklahoma_wells TO STDOUT WITH CSV HEADER" > oklahoma_wells.csv
+```
+
+```bash
+docker exec -it pipeline-postgres psql -U pipeline_user -d pipeline_db \
+  -c "COPY well_transfers TO STDOUT WITH CSV HEADER" > well_transfers.csv
+```
+
 ## Re-running Pipelines
 
 Pipelines use `ON CONFLICT DO UPDATE` (upsert), so they are safe to re-run:
 
 - **Earthquake pipeline**: fetches the latest hour of data. Run multiple times to see new earthquakes appear.
 - **Weather pipeline**: fetches the next 24 hours of forecasts for NYC. Run again for updated forecasts.
+- **Oklahoma wells pipeline**: downloads the full OCC CSV (~126 MB). Re-run to pick up newly permitted wells.
+- **Well transfers pipeline**: downloads the daily transfers Excel. Re-run for the latest transfer events.
 
 ```bash
 uv run python -m pipeline.flows.earthquake_flow
 uv run python -m pipeline.flows.weather_flow
+uv run python -m pipeline.flows.oklahoma_wells_flow
+uv run python -m pipeline.flows.well_transfers_flow
 ```
 
 No duplicates will be created thanks to the upsert pattern.

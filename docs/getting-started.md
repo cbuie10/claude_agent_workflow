@@ -84,6 +84,38 @@ Loading 24 rows into PostgreSQL
 Pipeline complete: 24 rows loaded
 ```
 
+### Oklahoma Wells Pipeline
+
+```bash
+uv run python -m pipeline.flows.oklahoma_wells_flow
+```
+
+Expected output:
+
+```
+Extracting Oklahoma wells data from https://oklahoma.gov/...
+Transforming CSV data (file size: ~126000000 bytes)
+Loading ~455000 rows into PostgreSQL
+Pipeline complete: ~455000 rows loaded
+```
+
+> **Note:** This pipeline downloads ~126 MB and may take a few minutes.
+
+### Well Transfers Pipeline
+
+```bash
+uv run python -m pipeline.flows.well_transfers_flow
+```
+
+Expected output:
+
+```
+Extracting well transfers data from https://oklahoma.gov/...
+Transforming ~900 Excel rows
+Loading ~900 rows into PostgreSQL
+Pipeline complete: ~900 rows loaded
+```
+
 ## 5. View in Prefect UI
 
 Open [http://localhost:4200](http://localhost:4200) in your browser. You should see the flow run(s) you just executed, with task-level detail, logs, and timing.
@@ -99,6 +131,8 @@ docker exec -it pipeline-postgres psql -U pipeline_user -d pipeline_db
 ```sql
 SELECT COUNT(*) FROM earthquakes;
 SELECT COUNT(*) FROM weather_forecasts;
+SELECT COUNT(*) FROM oklahoma_wells;
+SELECT COUNT(*) FROM well_transfers;
 \q
 ```
 
@@ -110,7 +144,7 @@ See [Querying Data](querying-data.md) for more SQL examples.
 uv run pytest tests/ -v
 ```
 
-All 24 tests should pass. These tests mock all external calls (HTTP and database), so they run fast and don't require Docker.
+All 52 tests should pass. These tests mock all external calls (HTTP and database), so they run fast and don't require Docker.
 
 ## 8. Lint the Code
 
