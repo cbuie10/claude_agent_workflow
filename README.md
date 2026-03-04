@@ -1,158 +1,74 @@
 # Claude Agent Workflow
 
-An autonomous data pipeline system where a Claude AI agent builds ETL pipelines from GitHub Issues. You describe what data you want in an issue, Claude writes the Python code and tests, and submits a pull request for your review.
+A knowledge repo for the Warwick team — learning and building with Claude Code, MCP servers, and autonomous AI agents.
 
-## How It Works
+## Projects
 
-```
-GitHub Issue          Claude Agent           Pull Request          You
-"Build a weather  --> reads issue +      --> creates branch,   --> review,
- data pipeline"       CLAUDE.md,              writes code,        request
-                      writes ETL code,        opens PR            changes,
-                      runs tests                                  merge
-```
+| Project | Description | Status |
+|---------|-------------|--------|
+| [Prefect ETL](projects/prefect-etl/) | Autonomous data pipeline system where Claude builds ETL pipelines from GitHub Issues | Production |
+| [MSSQL MCP Server](projects/mssql-mcp/) | Custom MCP server for SQL Server — gives Claude direct database access | In Development |
 
-1. **You create a GitHub Issue** describing a new data pipeline (API source, target table, transforms)
-2. **Claude agent triggers** via GitHub Actions, reads the issue and `CLAUDE.md` for conventions
-3. **Claude writes code** — extract/transform/load tasks, a Prefect flow, tests, and SQL schema
-4. **CI runs automatically** — linting (ruff) and tests (pytest) must pass
-5. **You review the PR** — approve, request changes with `@claude fix XYZ`, or close
-6. **Merge and run** — pull locally and execute the new pipeline
+## Quick Navigation
 
-## Tech Stack
-
-| Component | Tool |
-|-----------|------|
-| Language | Python 3.12 (managed with [uv](https://docs.astral.sh/uv/)) |
-| Database | PostgreSQL 16 (Docker) |
-| Orchestration | [Prefect v3](https://docs.prefect.io/) |
-| AI Agent | [claude-code-action](https://github.com/anthropics/claude-code-action) |
-| CI | GitHub Actions |
-| Linter | ruff |
-| Tests | pytest |
-
-## Current Pipelines
-
-### Earthquake ETL
-- **Source**: [USGS Earthquake API](https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson) (real-time, no auth required)
-- **Table**: `earthquakes` — magnitude, location, depth, timestamps
-- **Run**: `uv run python -m pipeline.flows.earthquake_flow`
-
-### Weather Forecast ETL
-- **Source**: [Open-Meteo API](https://open-meteo.com/) (free, no auth required)
-- **Table**: `weather_forecasts` — temperature, humidity, wind speed (hourly, NYC)
-- **Run**: `uv run python -m pipeline.flows.weather_flow`
-
-### Oklahoma Wells ETL
-- **Source**: [OCC RBDMS Wells CSV](https://oklahoma.gov/content/dam/ok/en/occ/documents/og/ogdatafiles/rbdms-wells.csv) (~126 MB, no auth required)
-- **Table**: `oklahoma_wells` — API number, operator, well status/type, county, lat/lon, legal description
-- **Run**: `uv run python -m pipeline.flows.oklahoma_wells_flow`
-
-### Well Transfers ETL
-- **Source**: [OCC Well Transfers Daily Excel](https://oklahoma.gov/content/dam/ok/en/occ/documents/og/ogdatafiles/well-transfers-daily.xlsx) (no auth required)
-- **Table**: `well_transfers` — transfer date, API number, from/to operator, well details, location
-- **Run**: `uv run python -m pipeline.flows.well_transfers_flow`
-
-## Quick Start
+### Prefect ETL Pipeline
+Autonomous ETL system: create a GitHub Issue, Claude writes the pipeline code, opens a PR.
 
 ```bash
-# Prerequisites: Docker, Python 3.12, uv (https://docs.astral.sh/uv/)
-
-# Clone and install
-git clone https://github.com/cbuie10/claude_agent_workflow.git
-cd claude_agent_workflow
+cd projects/prefect-etl
 uv sync --all-extras
-
-# Start PostgreSQL and Prefect Server
 docker compose -f docker/docker-compose.yml up -d
-
-# Run a pipeline (results appear in the Prefect UI)
 uv run python -m pipeline.flows.earthquake_flow
-
-# Open the Prefect dashboard
-open http://localhost:4200
-
-# Run tests
-uv run pytest tests/ -v
 ```
 
-## Project Structure
+See [projects/prefect-etl/README.md](projects/prefect-etl/README.md) for full docs.
 
-```
-claude_agent_workflow/
-├── .github/
-│   ├── workflows/
-│   │   ├── ci.yml                # Lint + test on push/PR
-│   │   └── claude.yml            # Claude agent trigger
-│   └── ISSUE_TEMPLATE/
-│       └── pipeline_request.md   # Structured issue template
-├── docker/
-│   ├── docker-compose.yml        # PostgreSQL + Prefect server
-│   ├── 00-create-prefect-db.sh   # Prefect database init script
-│   └── init.sql                  # Pipeline table definitions
-├── src/pipeline/
-│   ├── config.py                 # Environment variable config
-│   ├── db.py                     # DB connection helper
-│   ├── flows/
-│   │   ├── earthquake_flow.py       # Earthquake ETL flow
-│   │   ├── weather_flow.py          # Weather forecast ETL flow
-│   │   ├── oklahoma_wells_flow.py   # Oklahoma wells ETL flow
-│   │   └── well_transfers_flow.py   # Well transfers ETL flow
-│   └── tasks/
-│       ├── extract.py            # API fetch tasks
-│       ├── transform.py          # Data reshaping tasks
-│       └── load.py               # PostgreSQL upsert tasks
-├── tests/                        # 52 unit tests
-├── docs/                         # Detailed guides
-├── CLAUDE.md                     # Agent instructions
-└── pyproject.toml                # Dependencies and tool config
+### MSSQL MCP Server
+A FastMCP-based server that connects Claude Code to SQL Server databases.
+
+```bash
+cd projects/mssql-mcp
+uv sync --all-extras
+# Configure .env with your SQL Server connection
+python -m mssql_mcp.server
 ```
 
-## Documentation
+See [projects/mssql-mcp/README.md](projects/mssql-mcp/README.md) for full docs.
+
+## Shared Documentation
 
 | Guide | Description |
 |-------|-------------|
-| [Getting Started](docs/getting-started.md) | Prerequisites, installation, first pipeline run |
-| [Docker & PostgreSQL](docs/docker-guide.md) | Container management, connecting to the database, querying data |
-| [Querying Data](docs/querying-data.md) | SQL examples for exploring all pipeline data |
-| [Oklahoma Wells Data Model](docs/oklahoma-wells-data-model.md) | ERD, column mapping, and join queries for wells + transfers |
-| [Claude Agent Guide](docs/claude-agent-guide.md) | How the autonomous agent works, creating issues, reviewing PRs |
-| [Troubleshooting](docs/troubleshooting.md) | Known issues, permission fixes, and debugging checklist |
+| [Claude Agent Guide](docs/claude-agent-guide.md) | How claude-code-action works with GitHub Issues and PRs |
 
-## Environment Variables
+## Repo Structure
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql+psycopg2://pipeline_user:pipeline_pass@localhost:5432/pipeline_db` | PostgreSQL connection string |
-| `PREFECT_API_URL` | `http://localhost:4200/api` | Prefect server API endpoint |
-| `EARTHQUAKE_API_URL` | USGS all-hour feed | Earthquake data source |
-| `WEATHER_API_URL` | Open-Meteo NYC forecast | Weather data source |
-| `MIN_MAGNITUDE` | `0.0` | Minimum earthquake magnitude to load |
-| `OCC_WELLS_CSV_URL` | OCC RBDMS wells CSV | Oklahoma wells data source |
-| `WELL_TRANSFERS_XLSX_URL` | OCC well transfers daily Excel | Well transfers data source |
+```
+claude_agent_workflow/
+├── projects/
+│   ├── prefect-etl/           # Prefect v3 ETL pipelines
+│   │   ├── src/pipeline/      # Source code
+│   │   ├── tests/             # 52 unit tests
+│   │   ├── docs/              # ETL-specific guides
+│   │   └── docker/            # PostgreSQL + Prefect server
+│   └── mssql-mcp/             # MSSQL MCP server
+│       ├── src/mssql_mcp/     # FastMCP server source
+│       ├── tests/             # Server tests
+│       └── docs/              # MCP guides for the team
+├── docs/                      # Shared knowledge docs
+├── .github/workflows/         # CI + Claude agent
+├── CLAUDE.md                  # Agent instructions
+└── README.md                  # This file
+```
 
 ## Development
 
+Each project has its own `pyproject.toml` and dependency set. Work within project directories:
+
 ```bash
-# Lint
-uv run ruff check src/ tests/
+# ETL project
+cd projects/prefect-etl && uv sync --all-extras && uv run pytest tests/ -v
 
-# Auto-fix lint issues
-uv run ruff check --fix src/ tests/
-
-# Run tests
-uv run pytest tests/ -v
+# MCP project
+cd projects/mssql-mcp && uv sync --all-extras && uv run pytest tests/ -v
 ```
-
-## Creating a New Pipeline via GitHub Issue
-
-1. Go to **Issues > New Issue > Pipeline Request**
-2. Fill in the template: data source URL, target table schema, transform requirements
-3. Make sure the title contains `@claude`
-4. The Claude agent will pick it up, write the code, and open a PR
-
-See [Claude Agent Guide](docs/claude-agent-guide.md) for the full walkthrough.
-
-## License
-
-This is a teaching/demo project.

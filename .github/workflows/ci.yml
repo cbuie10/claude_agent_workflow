@@ -20,11 +20,20 @@ jobs:
       - name: Set up Python 3.12
         run: uv python install 3.12
 
-      - name: Install dependencies
-        run: uv sync --all-extras
+      - name: Install ETL dependencies
+        run: cd projects/prefect-etl && uv sync --all-extras
 
-      - name: Lint with ruff
-        run: uv run ruff check src/ tests/
+      - name: Lint ETL project
+        run: cd projects/prefect-etl && uv run ruff check src/ tests/
 
-      - name: Run tests
-        run: uv run pytest tests/ -v
+      - name: Test ETL project
+        run: cd projects/prefect-etl && uv run pytest tests/ -v
+
+      - name: Install MCP dependencies
+        run: cd projects/mssql-mcp && uv sync --all-extras
+
+      - name: Lint MCP project
+        run: cd projects/mssql-mcp && uv run ruff check src/ tests/
+
+      - name: Test MCP project
+        run: cd projects/mssql-mcp && uv run pytest tests/ -v

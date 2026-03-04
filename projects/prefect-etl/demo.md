@@ -54,7 +54,6 @@ Then run SQL:
 SELECT COUNT(*) FROM earthquakes;
 SELECT COUNT(*) FROM weather_forecasts;
 SELECT COUNT(*) FROM oklahoma_wells;
-SELECT COUNT(*) FROM well_transfers;
 ```
 
 Type `\q` to exit psql.

@@ -1,65 +1,51 @@
 # CLAUDE.md — Agent Instructions
 
-## Project Overview
-Prefect v3 ETL pipeline project. Extracts data from public APIs and loads
-into PostgreSQL. Python 3.12, managed with uv.
+## Repo Overview
+Multi-project knowledge repo. Each project lives under `projects/` with its own
+pyproject.toml, tests, and docs. Python 3.12, managed with uv.
 
-## Commands
-- Install deps: `uv sync --all-extras`
-- Lint: `uv run ruff check src/ tests/`
-- Fix lint: `uv run ruff check --fix src/ tests/`
-- Test: `uv run pytest tests/ -v`
-- Run a flow: `uv run python -m pipeline.flows.<flow_module>`
+## Commands (run from project directories)
+
+### Prefect ETL (`projects/prefect-etl/`)
+- Install: `cd projects/prefect-etl && uv sync --all-extras`
+- Lint: `cd projects/prefect-etl && uv run ruff check src/ tests/`
+- Test: `cd projects/prefect-etl && uv run pytest tests/ -v`
+- Run a flow: `cd projects/prefect-etl && uv run python -m pipeline.flows.<flow_module>`
+
+### MSSQL MCP (`projects/mssql-mcp/`)
+- Install: `cd projects/mssql-mcp && uv sync --all-extras`
+- Lint: `cd projects/mssql-mcp && uv run ruff check src/ tests/`
+- Test: `cd projects/mssql-mcp && uv run pytest tests/ -v`
+- Run server: `cd projects/mssql-mcp && python -m mssql_mcp.server`
 
 ## Project Structure
-- `src/pipeline/tasks/` — Prefect `@task` functions (extract, transform, load)
-- `src/pipeline/flows/` — Prefect `@flow` functions that compose tasks
-- `src/pipeline/config.py` — environment variable configuration with defaults
-- `tests/` — pytest tests, one test file per task/flow module
-- `docker/init.sql` — PostgreSQL table definitions
+- `projects/prefect-etl/` — Prefect v3 ETL pipeline project
+- `projects/mssql-mcp/` — FastMCP server for SQL Server
+- `docs/` — Shared documentation
 
-## Reference Implementation
-See `src/pipeline/flows/earthquake_flow.py` and its tasks in
-`src/pipeline/tasks/extract.py`, `transform.py`, `load.py` for the
-canonical pattern to follow when building new pipelines.
+## Conventions for Prefect ETL
+See `projects/prefect-etl/CLAUDE.md` or the reference implementation
+`projects/prefect-etl/src/pipeline/flows/earthquake_flow.py`.
 
-## Conventions for New Pipelines
-
-### Adding a new pipeline
-1. Create task files in `src/pipeline/tasks/` if new extract/transform/load logic is needed
-2. Create a flow file in `src/pipeline/flows/` that imports and composes tasks
-3. Create corresponding test files in `tests/`
-4. Add any new SQL tables to `docker/init.sql`
-5. Run `uv run ruff check src/ tests/` and `uv run pytest tests/ -v` before submitting
-
-### Code style
+### Code style (all projects)
 - Type hints on all function signatures
-- Every `@task` must have a docstring
-- Every `@flow` must have a docstring and use `log_prints=True`
-- Use `httpx` for HTTP requests (not requests)
-- Use SQLAlchemy `create_engine` + `text()` for SQL queries
-- Use `ON CONFLICT` upserts for idempotent loads
-- Use `get_run_logger()` for logging inside flows
+- Every public function must have a docstring
+- Use `ruff` for linting (line-length 100)
+- Use `pytest` for testing, mock external dependencies
 
-### Testing
-- Test tasks using `.fn()` to call the unwrapped function
-- Mock HTTP calls with `unittest.mock.patch` on `httpx.get`
-- Mock database calls with `unittest.mock.patch` on `create_engine`
-- The `conftest.py` provides a session-scoped `prefect_test_harness` fixture
-- All tests must pass before the PR is ready
-
-### Configuration
-- New environment variables go in `src/pipeline/config.py` with sensible defaults
-- Update `.env.example` with any new variables
+## Conventions for MSSQL MCP
+- Tools go in `projects/mssql-mcp/src/mssql_mcp/server.py`
+- DB connection logic in `database.py`, config in `config.py`
+- Environment variables for all connection settings (never hardcode)
+- Read-only mode is the default — write operations require explicit opt-in
 
 ## Git Conventions
 - Use **single-line** commit messages: `git commit -m "Short description of changes"`
-- Do NOT use multiline commit messages (no `\n`, no HEREDOCs, no `$(cat <<EOF ...)`). Multiline messages break the permission system and the commit will be denied.
-- Do NOT add Co-authored-by trailers or any other trailers to commit messages. They require newlines which break the permission system.
+- Do NOT use multiline commit messages
+- Do NOT add Co-authored-by trailers
 - Keep commit messages under 100 characters
 
 ## Do NOT
-- Do not modify `docker/docker-compose.yml` unless the issue explicitly asks for it
-- Do not add new dependencies to `pyproject.toml` — mention needed deps in the PR description
-- Do not use `print()` — use Prefect's `get_run_logger()` instead
-- Do not write integration tests that require a running database — mock all DB calls
+- Do not modify `projects/prefect-etl/docker/docker-compose.yml` unless explicitly asked
+- Do not add new dependencies without mentioning in the PR description
+- Do not write integration tests that require running services — mock all external calls
