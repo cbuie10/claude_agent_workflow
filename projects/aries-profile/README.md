@@ -4,8 +4,10 @@ Documentation and profiling of Aries database views on the **dbaries** SQL Serve
 
 ## Contents
 
-- [AC_ Views Profile](docs/ac-views-profile.md) — All 19 `AC_` views in the WARIES database:
-  source tables, join logic, filters, column maps, and Mermaid diagrams.
+- **[Aries Ecosystem](docs/aries-ecosystem.md)** — How WARIES, EVAL, and ARIES_COMMON
+  share data. Start here for the big picture.
+- [AC_ Views Profile](docs/ac-views-profile.md) — Detailed profile of all 19 `AC_` views
+  in WARIES: source tables, join logic, filters, and column maps.
 
 ## Quick Reference
 
