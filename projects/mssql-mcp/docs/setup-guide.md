@@ -121,10 +121,8 @@ After adding the MCP config and restarting Claude Code, try:
 
 ```
 > What databases are on this server?
-> Switch to the sales database
-> List all tables in my database
-> Describe the users table
-> SELECT TOP 5 * FROM dbo.orders
+> Switch to the spacing database
+> List all tables in ERGeographix
 ```
 
 Claude will automatically use the MCP tools to query your database.
@@ -135,15 +133,15 @@ The server connects to one database at a time (configured by `MSSQL_DATABASE`), 
 
 ```
 > What databases are available?        # calls list_databases()
-> Switch to the analytics database     # calls use_database("analytics")
+> Switch to the spacing database     # calls use_database("spacing")
 > Show me the tables                   # now queries analytics
-> Switch to the sales database         # calls use_database("sales")
+> Switch to the ERGeographix database         # calls use_database("ERGeographix")
 ```
 
 You can also query across databases without switching by using three-part names:
 
 ```
-> SELECT TOP 5 * FROM [analytics].[dbo].[events]
+> SELECT TOP 50 * FROM [spacing].[dbo].[EagleFordWellLinestringsGEOM]
 ```
 
 The active database resets to the configured default when the MCP server restarts (i.e., when you restart Claude Code).
